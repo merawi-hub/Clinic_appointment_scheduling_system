@@ -1,0 +1,54 @@
+{% extends 'base_admin.html' %}
+{% block title %}Reschedule Requests{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-calendar-edit me-2"></i>Patient Reschedule Requests</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0">
+            <thead>
+                <tr><th>Ref</th><th>Patient</th><th>Doctor</th><th>Current Date</th><th>Requested Date</th><th>Requested Time</th><th>Reason</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for rr in requests %}
+                <tr>
+                    <td><code style="font-size:0.8rem;color:#2563eb;">{{ rr.appointment.appointment_ref }}</code></td>
+                    <td><strong>{{ rr.appointment.patient.get_full_name|default:rr.appointment.patient.username }}</strong></td>
+                    <td>{{ rr.appointment.doctor }}</td>
+                    <td>{{ rr.appointment.date|date:"M d, Y" }} {{ rr.appointment.start_time|time:"g:i A" }}</td>
+                    <td><strong>{{ rr.requested_date|date:"M d, Y" }}</strong></td>
+                    <td><strong>{{ rr.requested_time|time:"g:i A" }}</strong></td>
+                    <td style="max-width:160px;font-size:0.82rem;">{{ rr.reason|default:"—" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'admin_handle_reschedule' rr.id %}" class="d-flex flex-column gap-1">
+                            {% csrf_token %}
+                            <textarea name="admin_note" class="form-control form-control-sm mb-1"
+                                      rows="1" placeholder="Note (optional)" style="min-width:150px;"></textarea>
+                            <div class="d-flex gap-1">
+                                <button name="action" value="approve" class="btn btn-success btn-sm"
+                                    data-confirm="Approve reschedule for {{ rr.appointment.appointment_ref }}? Doctor availability will be verified."
+                                    data-confirm-title="Approve Reschedule"
+                                    data-confirm-type="success">
+                                    <i class="fas fa-check me-1"></i>Approve
+                                </button>
+                                <button name="action" value="reject" class="btn btn-danger btn-sm"
+                                    data-confirm="Reject this reschedule request?"
+                                    data-confirm-title="Reject Reschedule"
+                                    data-confirm-type="danger">
+                                    <i class="fas fa-times me-1"></i>Reject
+                                </button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-5">No pending reschedule requests.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

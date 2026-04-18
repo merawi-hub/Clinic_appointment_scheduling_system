@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Schedule Follow-Up{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-calendar-plus me-2"></i>Schedule Follow-Up Appointment</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<!-- Original appointment info -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-history me-2"></i>Original Appointment</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><strong>Ref:</strong> <code style="color:#2563eb;">{{ original.appointment_ref }}</code></div>
+            <div class="col-md-3"><strong>Patient:</strong> {{ original.patient.get_full_name|default:original.patient.username }}</div>
+            <div class="col-md-3"><strong>Date:</strong> {{ original.date|date:"M d, Y" }}</div>
+            <div class="col-md-3"><strong>Status:</strong>
+                <span class="badge bg-{% if original.status == 'completed' %}primary{% else %}secondary{% endif %}">{{ original.status|capfirst }}</span>
+            </div>
+        </div>
+        {% if original.notes %}
+        <div class="mt-2"><strong>Notes:</strong> <span class="text-muted">{{ original.notes }}</span></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Doctor's schedule -->
+<div class="card mb-4">
+    <div class="card-header">Your Weekly Schedule</div>
+    <div class="card-body p-0">
+        <table class="table table-bordered mb-0">
+            <thead><tr><th>Day</th><th>Working Hours</th><th>Slot Duration</th></tr></thead>
+            <tbody>
+                {% for a in availabilities %}
+                <tr>
+                    <td>{{ a.get_day_of_week_display }}</td>
+                    <td>{{ a.start_time|time:"g:i A" }} – {{ a.end_time|time:"g:i A" }}</td>
+                    <td>{{ a.slot_duration }} min</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Date selection -->
+<h5 class="mb-3">Select Follow-Up Date</h5>
+{% if upcoming_dates %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+    {% for d in upcoming_dates %}
+    <a href="?date={{ d|date:'Y-m-d' }}"
+       class="btn {% if selected_date == d|date:'Y-m-d' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <strong>{{ d|date:"D" }}</strong><br>
+        <small>{{ d|date:"M d" }}</small>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">No available dates in the next 30 days.</p>
+{% endif %}
+
+{% if parsed_date %}
+<h5>Available Slots — {{ parsed_date|date:"l, M d Y" }}</h5>
+{% if slots %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="date" value="{{ selected_date }}">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for slot in slots %}
+        <div>
+            <input type="radio" class="btn-check" name="slot" id="slot_{{ forloop.counter }}" value="{{ slot|time:'H:i' }}" required>
+            <label class="btn btn-outline-success" for="slot_{{ forloop.counter }}">{{ slot|time:"g:i A" }}</label>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-success">
+        <i class="fas fa-calendar-check me-1"></i>Confirm Follow-Up Appointment
+    </button>
+</form>
+{% else %}
+<p class="text-muted">No available slots for this date.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

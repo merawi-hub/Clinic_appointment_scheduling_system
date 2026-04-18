@@ -1,0 +1,136 @@
+{% extends 'base_admin.html' %}
+{% block title %}Medical Records{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-notes-medical me-2"></i>Medical Records</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-search me-2"></i>Search Records</div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Appointment Ref</label>
+                <input type="text" name="ref" class="form-control" value="{{ get.ref }}" placeholder="AC-YYYYMMDD-XXXX">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Patient Name / Username</label>
+                <input type="text" name="patient" class="form-control" value="{{ get.patient }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Doctor Name / Username</label>
+                <input type="text" name="doctor" class="form-control" value="{{ get.doctor }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Exact Date</label>
+                <input type="date" name="date" class="form-control" value="{{ get.date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <select name="month" class="form-select">
+                    <option value="">All Months</option>
+                    {% for val, name in all_months %}
+                    <option value="{{ val }}" {% if get.month == val %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Year</label>
+                <input type="number" name="year" class="form-control" value="{{ get.year }}" placeholder="2026" min="2020" max="2030">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for val, label in status_choices %}
+                    <option value="{{ val }}" {% if get.status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Search</button>
+            </div>
+            {% if searched %}
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{% url 'admin_medical_records' %}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Results -->
+{% if not searched %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-notes-medical" style="font-size:3rem;color:#e2e8f0;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-0">Use the search above to find medical records.<br>Search by ref, patient name, doctor, date, or status.</p>
+    </div>
+</div>
+
+{% elif records %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-list me-2"></i>Results ({{ records|length }})</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Ref</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Specialty</th>
+                    <th>Date</th><th>Time</th><th>Status</th><th>Notes</th><th>Follow-up</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in records %}
+                <tr>
+                    <td><code style="font-size:0.8rem;color:#2563eb;">{{ appt.appointment_ref }}</code></td>
+                    <td>
+                        <strong>{{ appt.patient.get_full_name|default:appt.patient.username }}</strong><br>
+                        <small class="text-muted">{{ appt.patient.email|default:"" }}</small>
+                    </td>
+                    <td>{{ appt.patient_phone|default:appt.patient.phone|default:"—" }}</td>
+                    <td>{{ appt.doctor|default:"—" }}</td>
+                    <td>{{ appt.doctor.specialization|default:"—" }}</td>
+                    <td>{{ appt.date|date:"M d, Y" }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td>
+                        <span class="badge bg-{% if appt.status == 'completed' %}success{% elif appt.status == 'confirmed' %}primary{% elif appt.status == 'pending' %}warning text-dark{% elif appt.status == 'cancelled' %}secondary{% else %}danger{% endif %}">
+                            {{ appt.status|capfirst }}
+                        </span>
+                    </td>
+                    <td style="max-width:180px;font-size:0.82rem;">
+                        {% if appt.notes %}
+                            {% if appt.notes|length > 60 %}
+                            <span class="rm-short">{{ appt.notes|slice:":60" }}…</span>
+                            <span class="rm-full" style="display:none;">{{ appt.notes }}</span>
+                            <a href="#" style="font-size:0.72rem;" onclick="var s=this.previousElementSibling,h=s.previousElementSibling;if(s.style.display==='none'){s.style.display='';h.style.display='none';this.textContent='Less';}else{s.style.display='none';h.style.display='';this.textContent='More';}return false;">More</a>
+                            {% else %}{{ appt.notes }}{% endif %}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% with fu=appt.follow_ups.first %}
+                        {% if fu %}
+                        <code style="color:#7c3aed;font-size:0.78rem;">{{ fu.appointment_ref }}</code>
+                        <small class="text-muted d-block">{{ fu.date|date:"M d, Y" }}</small>
+                        {% else %}—{% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-search" style="font-size:3rem;color:#e2e8f0;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-0">No records found matching your search.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

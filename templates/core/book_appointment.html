@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Book Appointment{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Book with {{ doctor }}</h4>
+    <a href="{% url 'search_doctors' %}" class="btn-nav-back"><i class="fas fa-search"></i> Back to Search</a>
+</div>
+
+{% if not availabilities %}
+<div class="alert alert-warning">This doctor has not set any availability yet.</div>
+<a href="{% url 'search_doctors' %}" class="btn-nav-back"><i class="fas fa-search"></i> Back to search</a>
+{% elif blocking_annual %}
+<div class="alert alert-warning" style="border-radius:12px;padding:1.2rem 1.5rem;">
+    <div class="d-flex align-items-center gap-3">
+        <i class="fas fa-umbrella-beach" style="font-size:2rem;color:#d97706;"></i>
+        <div>
+            <strong style="font-size:1rem;">{{ doctor }} is on Annual Leave</strong><br>
+            <span style="font-size:0.9rem;">
+                This doctor is currently on annual leave and is not accepting new appointments.<br>
+                Expected return date: <strong>{{ annual_return_date }}</strong>
+            </span>
+        </div>
+    </div>
+</div>
+<a href="{% url 'search_doctors' %}" class="btn-nav-back mt-3"><i class="fas fa-search"></i> Find another doctor</a>
+{% else %}
+
+<!-- Doctor's weekly schedule -->
+<div class="card mb-4">
+    <div class="card-header">Doctor's Weekly Schedule</div>
+    <div class="card-body p-0">
+        <table class="table table-bordered mb-0">
+            <thead>
+                <tr><th>Day</th><th>Working Hours</th><th>Slot Duration</th></tr>
+            </thead>
+            <tbody>
+                {% for a in availabilities %}
+                <tr>
+                    <td>{{ a.get_day_of_week_display }}</td>
+                    <td>{{ a.start_time|time:"g:i A" }} – {{ a.end_time|time:"g:i A" }}</td>
+                    <td>{{ a.slot_duration }} min</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Available dates in next 2 weeks -->
+<h5 class="mb-3">Select an Available Date</h5>
+{% if upcoming_dates %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+    {% for d in upcoming_dates %}
+    <a href="?date={{ d|date:'Y-m-d' }}"
+       class="btn {% if selected_date == d|date:'Y-m-d' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <strong>{{ d|date:"D" }}</strong><br>
+        <small>{{ d|date:"M d" }}</small>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">No available dates in the next 2 weeks.</p>
+{% endif %}
+
+<!-- Slots for selected date -->
+{% if parsed_date %}
+<h5>Available Slots — {{ parsed_date|date:"l, M d Y" }}</h5>
+{% if on_leave %}
+<div class="alert alert-warning">
+    <i class="fas fa-calendar-times me-2"></i>
+    <strong>{{ doctor }} is unavailable on this date.</strong>
+    {% if leave_on_selected %}
+        Reason: <strong>{{ leave_on_selected.get_leave_type_display }}</strong>
+        ({{ leave_on_selected.start_date }} – {{ leave_on_selected.end_date }}).
+        Return date: <strong>{{ leave_on_selected.end_date }}</strong>.
+    {% endif %}
+    Please select a different date.
+</div>
+{% elif slots %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="date" value="{{ selected_date }}">
+
+    {% if show_warning %}
+    <!-- Rule 2b: Warn about other incomplete appointments -->
+    <div class="alert alert-warning" style="border-radius:12px;padding:1rem 1.25rem;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>You have incomplete appointment(s):</strong>
+        <ul class="mb-2 mt-1">
+            {% for appt in other_incomplete %}
+            <li>{{ appt.doctor }} ({{ appt.doctor.specialization|default:"General" }}) — {{ appt.date|date:"M d, Y" }} at {{ appt.start_time|time:"g:i A" }} [{{ appt.status|capfirst }}]</li>
+            {% endfor %}
+        </ul>
+        Do you still want to book this appointment?
+        <div class="d-flex gap-2 mt-2">
+            <input type="hidden" name="slot" value="{{ slot_time }}">
+            <input type="hidden" name="confirmed_warning" value="1">
+            <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-check me-1"></i>Yes, Book Anyway</button>
+            <a href="?date={{ selected_date }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for slot in slots %}
+        <div>
+            <input type="radio" class="btn-check" name="slot" id="slot_{{ forloop.counter }}" value="{{ slot|time:'H:i' }}" required>
+            <label class="btn btn-outline-success" for="slot_{{ forloop.counter }}">
+                {{ slot|time:"g:i A" }}
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary">Confirm Booking</button>
+    {% endif %}
+</form>
+{% else %}
+<p class="text-muted">No available slots for this date — all slots are booked.</p>
+{% endif %}
+{% endif %}
+
+<a href="{% url 'search_doctors' %}" class="btn-nav-back mt-3"><i class="fas fa-search"></i> Back to search</a>
+{% endif %}
+{% endblock %}
+

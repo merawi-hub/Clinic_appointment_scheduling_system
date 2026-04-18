@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Manage Appointment{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Manage Appointment</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Appointment Details</div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Ref:</strong> <code style="color:#2563eb;font-size:0.9rem;">{{ appointment.appointment_ref }}</code></p>
+                <p class="mb-1"><strong>Patient:</strong> {{ appointment.patient.get_full_name|default:appointment.patient.username }}</p>
+                <p class="mb-1"><strong>Email:</strong>
+                    {% if appointment.patient_email %}
+                        <a href="mailto:{{ appointment.patient_email }}">{{ appointment.patient_email }}</a>
+                    {% elif appointment.patient.email %}
+                        <a href="mailto:{{ appointment.patient.email }}">{{ appointment.patient.email }}</a>
+                    {% else %}—{% endif %}
+                </p>
+                <p class="mb-1"><strong>Phone:</strong>
+                    {{ appointment.patient_phone|default:appointment.patient.phone|default:"—" }}
+                </p>
+                <p class="mb-1"><strong>Date:</strong> {{ appointment.date|date:"l, M d Y" }}</p>
+                <p class="mb-1"><strong>Time:</strong> {{ appointment.start_time|time:"g:i A" }} – {{ appointment.end_time|time:"g:i A" }}</p>
+                <p class="mb-0"><strong>Status:</strong>
+                    <span class="badge bg-{% if appointment.status == 'confirmed' %}success{% elif appointment.status == 'pending' %}warning{% elif appointment.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                        {{ appointment.status|capfirst }}
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-6">
+                {% if appointment.follow_up_of %}
+                <div class="alert alert-info py-2 mb-2" style="font-size:0.85rem;">
+                    <i class="fas fa-link me-1"></i>Follow-up of:
+                    <code style="color:#1e40af;">{{ appointment.follow_up_of.appointment_ref }}</code>
+                    ({{ appointment.follow_up_of.date|date:"M d, Y" }})
+                </div>
+                {% endif %}
+                {% if appointment.notes %}
+                <div style="background:#f8fafc;border-radius:8px;padding:0.75rem;border:1px solid #e2e8f0;">
+                    <strong style="font-size:0.85rem;">Visit Notes:</strong>
+                    <p class="text-muted mb-0" style="font-size:0.85rem;margin-top:4px;">{{ appointment.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if appointment.status == 'pending' %}
+        <!-- Pending: can accept, reject, or reschedule -->
+        <h6 class="mb-3">Actions</h6>
+        <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button name="action" value="confirm" class="btn btn-success me-2">✓ Accept</button>
+            <button name="action" value="reject" class="btn btn-danger me-2">✗ Reject</button>
+        </form>
+        <hr>
+        <h6>Suggest Reschedule</h6>
+        <form method="post" class="row g-2 mt-1">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label">New Date <small class="text-muted">(today or future)</small></label>
+                <input type="date" name="new_date" class="form-control" required
+                       min="{% now 'Y-m-d' %}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">New Time</label>
+                <input type="time" name="new_time" class="form-control" required>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button name="action" value="reschedule" class="btn btn-warning w-100">Reschedule</button>
+            </div>
+        </form>
+
+        {% elif appointment.status == 'confirmed' %}
+        <!-- Confirmed: reschedule if future, add notes if past -->
+        {% if appointment_passed %}
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+            <a href="{% url 'add_visit_notes' appointment.id %}" class="btn btn-primary">
+                <i class="fas fa-notes-medical me-1"></i>Add Visit Notes
+            </a>
+            <a href="{% url 'doctor_followup' appointment.id %}" class="btn btn-outline-success">
+                <i class="fas fa-calendar-plus me-1"></i>Schedule Follow-Up
+            </a>
+        </div>
+        <div class="alert alert-info" style="font-size:0.88rem;">
+            <i class="fas fa-info-circle me-2"></i>
+            The appointment will be marked as <strong>completed by the admin/receptionist</strong> when the patient checks out.
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            This appointment is scheduled for <strong>{{ appointment.date|date:"M d Y" }} at {{ appointment.start_time|time:"g:i A" }}</strong>.
+            You can mark it complete after the appointment time passes.
+        </div>
+        {% endif %}
+        <hr>
+        <h6>Suggest Reschedule</h6>
+        <form method="post" class="row g-2 mt-1">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label">New Date <small class="text-muted">(today or future)</small></label>
+                <input type="date" name="new_date" class="form-control" required
+                       min="{% now 'Y-m-d' %}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">New Time</label>
+                <input type="time" name="new_time" class="form-control" required>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button name="action" value="reschedule" class="btn btn-warning w-100">Reschedule</button>
+            </div>
+        </form>
+
+        {% elif appointment.status == 'rescheduled' %}
+        <!-- Rescheduled: waiting for patient, can still complete -->
+        <div class="alert alert-info">This appointment has been rescheduled. Waiting for patient response.</div>
+        <a href="{% url 'add_visit_notes' appointment.id %}" class="btn btn-success">✓ Mark Complete</a>
+
+        {% else %}
+        <!-- Completed, rejected, cancelled -->
+        <div class="alert alert-secondary">
+            This appointment is <strong>{{ appointment.status }}</strong> and requires no further action.
+        </div>
+        {% if appointment.notes %}
+        <p><strong>Visit Notes:</strong></p>
+        <p class="text-muted">{{ appointment.notes }}</p>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

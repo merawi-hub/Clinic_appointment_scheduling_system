@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}Doctor Dashboard — Addis Clinic{% endblock %}
+{% block content %}
+
+<!-- Doctor Hero -->
+<div style="background:linear-gradient(135deg,#0f4c75 0%,#1b6ca8 40%,#2c7a7b 100%),url('https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1200&q=60') center/cover no-repeat;background-blend-mode:multiply;border-radius:16px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+    <div class="d-flex align-items-center gap-3" style="position:relative;z-index:1;">
+        <div style="width:70px;height:70px;background:linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.1));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:#fff;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);backdrop-filter:blur(4px);">
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+        </div>
+        <div>
+            <h4 style="color:#fff;margin:0;font-size:1.5rem;font-weight:800;">Dr. {{ user.get_full_name|default:user.username }}</h4>
+            {% if user.doctor_profile.specialization %}
+            <p style="color:rgba(255,255,255,0.8);margin:2px 0 0;font-size:0.9rem;"><i class="fas fa-stethoscope me-1"></i>{{ user.doctor_profile.specialization }}</p>
+            {% endif %}
+            <p style="color:rgba(255,255,255,0.6);margin:2px 0 0;font-size:0.8rem;"><i class="fas fa-calendar me-1"></i>{{ today|date:"l, F d Y" }}</p>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="{% url 'doctor_leave_request' %}" class="btn-card-action"><i class="fas fa-calendar-minus me-1"></i>Time Off</a>
+            {% if reschedule_pending_count %}
+            <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action" style="background:rgba(220,38,38,0.2);border-color:rgba(220,38,38,0.5);">
+                <i class="fas fa-calendar-edit me-1"></i>Reschedule Requests
+                <span class="badge bg-danger ms-1">{{ reschedule_pending_count }}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action"><i class="fas fa-calendar-edit me-1"></i>Reschedule Requests</a>
+            {% endif %}
+            <a href="{% url 'doctor_schedule' %}" class="btn-action"><i class="fas fa-calendar-cog me-1"></i>Manage Schedule</a>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a href="{% url 'doctor_today' %}" class="stat-card d-block text-decoration-none" style="border-left-color:#2563eb;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#2563eb;line-height:1;">{{ today_appointments.count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-calendar-day me-1"></i>Today's Appointments →</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(37,99,235,0.35);">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="#pending" class="stat-card d-block text-decoration-none" style="border-left-color:#d97706;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#d97706;line-height:1;">{{ pending.count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-clock me-1"></i>Pending Requests →</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(217,119,6,0.35);">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'doctor_upcoming' %}" class="stat-card d-block text-decoration-none" style="border-left-color:#16a34a;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#16a34a;line-height:1;">{{ upcoming.count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-calendar-check me-1"></i>Upcoming Confirmed →</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#16a34a,#22c55e);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(22,163,74,0.35);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Pending Requests -->
+<div id="pending" class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-inbox me-2"></i>Pending Requests</span>
+        {% if pending.count %}<span class="badge" style="background:#fef9c3;color:#854d0e;font-size:0.8rem;">{{ pending.count }} waiting</span>{% endif %}
+    </div>
+    {% if pending %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Patient</th><th>Date</th><th>Day</th><th>Time</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for appt in pending %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:32px;height:32px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#2563eb;flex-shrink:0;">
+                                {{ appt.patient.first_name|first|upper }}{{ appt.patient.last_name|first|upper }}
+                            </div>
+                            <span style="font-weight:600;">{{ appt.patient.get_full_name|default:appt.patient.username }}</span>
+                        </div>
+                    </td>
+                    <td>{{ appt.date|date:"M d, Y" }}</td>
+                    <td><span style="font-size:0.82rem;color:#64748b;">{{ appt.date|date:"l" }}</span></td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'manage_appointment' appt.id %}" class="d-inline-flex gap-1">
+                            {% csrf_token %}
+                            <button name="action" value="confirm" class="btn btn-success btn-sm"><i class="fas fa-check me-1"></i>Accept</button>
+                            <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="fas fa-times me-1"></i>Reject</button>
+                        </form>
+                        <a href="{% url 'manage_appointment' appt.id %}" class="btn btn-warning btn-sm ms-1"><i class="fas fa-clock me-1"></i>Reschedule</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-4">
+        <i class="fas fa-check-circle" style="font-size:2.5rem;color:#dcfce7;margin-bottom:0.75rem;display:block;"></i>
+        <p class="text-muted mb-0">No pending requests. All clear!</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Today's Schedule -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calendar-day me-2"></i>Today's Schedule — {{ today|date:"l" }}</span>
+        <a href="{% url 'doctor_today' %}" class="btn-card-action"><i class="fas fa-expand-alt me-1"></i>View Full</a>
+    </div>
+    {% if today_appointments %}
+    <div class="list-group list-group-flush">
+        {% for appt in today_appointments %}
+        <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+            <div class="d-flex align-items-center gap-3">
+                <div style="text-align:center;min-width:50px;">
+                    <div style="font-size:0.9rem;font-weight:700;color:#2563eb;">{{ appt.start_time|time:"g:i" }}</div>
+                    <div style="font-size:0.65rem;color:#64748b;">{{ appt.start_time|time:"A" }}</div>
+                </div>
+                <div style="width:1px;height:30px;background:#e2e8f0;"></div>
+                <div>
+                    <div style="font-weight:600;font-size:0.9rem;">{{ appt.patient.get_full_name|default:appt.patient.username }}</div>
+                    <div style="font-size:0.75rem;color:#64748b;">{{ appt.patient.phone|default:"No phone" }}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge" style="background:{% if appt.status == 'confirmed' %}#dcfce7;color:#166534{% else %}#fef9c3;color:#854d0e{% endif %};">
+                    {{ appt.status|capfirst }}
+                </span>
+                {% if appt.status == 'confirmed' and now and appt.date <= today %}
+                <a href="{% url 'add_visit_notes' appt.id %}" class="btn btn-sm btn-success"><i class="fas fa-notes-medical me-1"></i>Add Notes</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card-body text-center py-4">
+        <i class="fas fa-coffee" style="font-size:2.5rem;color:#e2e8f0;margin-bottom:0.75rem;display:block;"></i>
+        <p class="text-muted mb-2">No appointments today ({{ today|date:"l" }}).</p>
+        <a href="{% url 'doctor_today' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye me-1"></i>View Availability</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

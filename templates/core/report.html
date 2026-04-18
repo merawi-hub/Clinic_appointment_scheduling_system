@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Addis Clinic Report — {{ period_label }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: #fff; font-size: 13px; }
+
+        /* Screen controls - hidden when printing */
+        .screen-controls {
+            background: #1e3a5f; padding: 1rem 2rem;
+            display: flex; align-items: center; gap: 1rem;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .screen-controls h2 { color: #fff; font-size: 1rem; flex: 1; }
+        .btn-print { background: #22c55e; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+        .btn-back  { display:inline-flex;align-items:center;gap:0.45rem;padding:8px 18px;border-radius:50px;border:none;color:#fff;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 60%,#0891b2 100%);background-size:200% 200%;background-position:left center;box-shadow:0 3px 10px rgba(37,99,235,0.35);font-size:0.85rem;font-weight:600;text-decoration:none;transition:background-position 0.4s ease,box-shadow 0.3s ease,transform 0.2s ease; }
+        .btn-back:hover { background-position:right center;box-shadow:0 6px 20px rgba(37,99,235,0.5);transform:translateY(-2px) scale(1.03);color:#fff; }
+        .period-select { display: flex; gap: 0.5rem; align-items: center; }
+        .period-select select { padding: 6px 10px; border-radius: 6px; border: 1px solid #93c5fd; background: #0f172a; color: #fff; font-size: 0.85rem; }
+
+        /* Report page */
+        .report-page { max-width: 900px; margin: 2rem auto; padding: 2rem; background: #fff; }
+
+        /* Header */
+        .report-header { border-bottom: 3px solid #1e3a5f; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+        .report-header .clinic-name { font-size: 1.8rem; font-weight: 700; color: #1e3a5f; }
+        .report-header .report-title { font-size: 1.1rem; color: #374151; margin-top: 0.3rem; }
+        .report-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; font-size: 0.88rem; }
+        .report-meta .meta-item { display: flex; gap: 0.5rem; }
+        .report-meta .meta-label { font-weight: 600; color: #374151; min-width: 120px; }
+        .report-meta .meta-value { color: #1a1a1a; }
+
+        /* Sections */
+        .section { margin-bottom: 2rem; }
+        .section-title { font-size: 1rem; font-weight: 700; color: #1e3a5f; border-left: 4px solid #1e3a5f; padding-left: 0.7rem; margin-bottom: 1rem; }
+
+        /* Summary cards */
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .summary-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; text-align: center; }
+        .summary-card .num { font-size: 2rem; font-weight: 700; color: #1e3a5f; }
+        .summary-card .lbl { font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #1e3a5f; color: #fff; padding: 8px 10px; text-align: left; }
+        td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+        tr:nth-child(even) td { background: #f8fafc; }
+
+        /* Status badges */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+        .badge-pending    { background: #fef9c3; color: #854d0e; }
+        .badge-confirmed  { background: #dcfce7; color: #166534; }
+        .badge-rejected   { background: #fee2e2; color: #991b1b; }
+        .badge-cancelled  { background: #f1f5f9; color: #475569; }
+        .badge-completed  { background: #dbeafe; color: #1e40af; }
+        .badge-rescheduled{ background: #f3e8ff; color: #6b21a8; }
+
+        /* Signature section */
+        .signature-section { margin-top: 3rem; border-top: 1px solid #e2e8f0; padding-top: 2rem; }
+        .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
+        .sig-box { border-top: 1px solid #1a1a1a; padding-top: 0.5rem; }
+        .sig-label { font-size: 0.8rem; color: #374151; font-weight: 600; }
+        .sig-line { height: 40px; border-bottom: 1px dashed #aaa; margin: 0.5rem 0; }
+        .sig-name { font-size: 0.75rem; color: #64748b; }
+
+        /* Footer */
+        .report-footer { margin-top: 2rem; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+
+        /* Print styles */
+        @media print {
+            .screen-controls { display: none !important; }
+            .report-page { margin: 0; padding: 1.5rem; max-width: 100%; }
+            body { font-size: 12px; }
+            @page { margin: 1.5cm; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Screen controls (hidden on print) -->
+<div class="screen-controls">
+    <h2>📊 Addis Clinic Report — {{ period_label }}</h2>
+    <div class="period-select">
+        <span style="color:#93c5fd;font-size:0.85rem;">Period:</span>
+        <select onchange="window.location='/admin-dashboard/report/?period='+this.value">
+            {% for val, label in period_choices %}
+            <option value="{{ val }}" {% if val == period %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <!-- Custom date range -->
+        <form id="customForm" action="{% url 'generate_report' %}" method="get" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <input type="hidden" name="period" value="custom">
+            <span style="color:#93c5fd;font-size:0.85rem;font-weight:600;">Last</span>
+            <input type="number" name="custom_value" value="{{ custom_value|default:'1' }}" min="1" max="999"
+                   style="width:65px;padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.85rem;text-align:center;" required>
+            <select name="custom_unit" style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.85rem;">
+                <option value="days" {% if custom_unit == 'days' %}selected{% endif %}>Days</option>
+                <option value="weeks" {% if custom_unit == 'weeks' %}selected{% endif %}>Weeks</option>
+                <option value="months" {% if custom_unit == 'months' %}selected{% endif %}>Months</option>
+            </select>
+            <button type="submit" style="padding:4px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">Generate</button>
+        </form>
+    </div>
+    <a href="{% url 'admin_dashboard' %}" class="btn-back"><i class="fas fa-th-large"></i> Dashboard</a>
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <small style="color:#94a3b8;font-size:0.75rem;">In print dialog → select "Save as PDF" to download</small>
+</div>
+
+<!-- Report content -->
+<div class="report-page">
+
+    <!-- Header -->
+    <div class="report-header">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+                <div class="clinic-name">🏥 Addis Clinic</div>
+                <div class="report-title">Addis Clinicointment System — Official Report</div>
+            </div>
+            <div style="text-align:right;font-size:0.8rem;color:#64748b;">
+                <div><strong>Report ID:</strong> RPT-{{ generated_at|date:"Ymd" }}-{{ period|upper }}</div>
+                <div><strong>Generated:</strong> {{ generated_at|date:"F d, Y" }}</div>
+                <div><strong>Confidential</strong></div>
+            </div>
+        </div>
+        <div class="report-meta" style="margin-top:1rem;">
+            <div class="meta-item"><span class="meta-label">Report Period:</span><span class="meta-value">{{ period_label }}</span></div>
+            <div class="meta-item"><span class="meta-label">Date Range:</span><span class="meta-value">{{ start_date }} — {{ end_date }}</span></div>
+            <div class="meta-item"><span class="meta-label">Generated By:</span><span class="meta-value">{{ generated_by }}</span></div>
+            <div class="meta-item"><span class="meta-label">Total Records:</span><span class="meta-value">{{ total_appointments }} appointments</span></div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+        <div class="section-title">Executive Summary</div>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="num">{{ total_appointments }}</div>
+                <div class="lbl">Total Appointments</div>
+            </div>
+            <div class="summary-card">
+                <div class="num">{{ total_doctors }}</div>
+                <div class="lbl">Active Doctors</div>
+            </div>
+            <div class="summary-card">
+                <div class="num">{{ total_patients }}</div>
+                <div class="lbl">Registered Patients</div>
+            </div>
+            <div class="summary-card">
+                <div class="num">{{ status_summary.Confirmed|default:0 }}</div>
+                <div class="lbl">Confirmed</div>
+            </div>
+        </div>
+
+        <!-- System Activity Summary -->
+    <div class="section">
+        <div class="section-title">System Activity Summary ({{ period_label }})</div>
+        <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div class="summary-card"><div class="num">{{ activity_stats.new_registrations }}</div><div class="lbl">New Registrations</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.pending_registrations }}</div><div class="lbl">Pending Approvals</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.replacement_queue_items }}</div><div class="lbl">Doctor Replacements</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.notifications_sent }}</div><div class="lbl">Notifications Sent</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.doctors_total }}</div><div class="lbl">Total Doctors</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.patients_total }}</div><div class="lbl">Active Patients</div></div>
+            <div class="summary-card"><div class="num">{{ activity_stats.specializations_total }}</div><div class="lbl">Specializations</div></div>
+        </div>
+    </div>
+
+    <!-- Status breakdown table -->
+        <table>
+            <thead><tr><th>Status</th><th>Count</th><th>Percentage</th></tr></thead>
+            <tbody>
+                {% for label, count in status_summary.items %}
+                <tr>
+                    <td><span class="badge badge-{{ label|lower }}">{{ label }}</span></td>
+                    <td>{{ count }}</td>
+                    <td>{% if total_appointments %}{{ count|floatformat:0 }} / {{ total_appointments }} ({% widthratio count total_appointments 100 %}%){% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top Doctors -->
+    <!-- Activity Stats -->
+    <div class="section">
+        <div class="section-title">System Activity Summary</div>
+        <table>
+            <thead><tr><th>Activity</th><th>Count</th></tr></thead>
+            <tbody>
+                {% for label, count in activity_stats.items %}
+                <tr><td>{{ label }}</td><td><strong>{{ count }}</strong></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if doctor_summary %}
+    <div class="section">
+        <div class="section-title">Doctor Performance Summary</div>
+        <table>
+            <thead><tr><th>#</th><th>Doctor Name</th><th>Specialization</th><th>Appointments</th></tr></thead>
+            <tbody>
+                {% for d in doctor_summary %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>Dr. {{ d.doctor__user__first_name }} {{ d.doctor__user__last_name }}</td>
+                    <td>{{ d.doctor__specialization__name|default:"General" }}</td>
+                    <td><strong>{{ d.total }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Doctor Availability Stats -->
+    {% if report_avail_stats %}
+    <div class="section">
+        <div class="section-title">Doctor Availability Overview</div>
+        <table>
+            <thead><tr><th>Doctor</th><th>Specialization</th><th>Days/Week</th><th>Hours/Week</th><th>Hours/Month (est.)</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for ds in report_avail_stats %}
+                <tr>
+                    <td>{{ ds.doctor }}</td>
+                    <td>{{ ds.doctor.specialization|default:"—" }}</td>
+                    <td>{{ ds.days_per_week }}</td>
+                    <td>{{ ds.hours_per_week }}h</td>
+                    <td>{{ ds.hours_per_month }}h</td>
+                    <td>{% if ds.doctor.is_available and ds.days_per_week > 0 %}Active{% elif ds.doctor.is_available %}Available — No Schedule{% else %}Unavailable{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Appointment Details -->
+    <div class="section">
+        <div class="section-title">Appointment Details ({{ total_appointments }} records)</div>
+        {% if appointments %}
+        <table>
+            <thead>
+                <tr><th>#</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ appt.patient.get_full_name|default:appt.patient.username }}</td>
+                    <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                    <td>{{ appt.date }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td><span class="badge badge-{{ appt.status }}">{{ appt.status|capfirst }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:#64748b;text-align:center;padding:2rem;">No appointments found for this period.</p>
+        {% endif %}
+    </div>
+
+    <!-- Signature Section -->
+    <div class="signature-section">
+        <div class="section-title">Authorization & Signatures</div>
+        <div class="sig-grid">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Reported / Generated By</div>
+                <div class="sig-name">{{ generated_by }} &nbsp;&nbsp; Date: ___________</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Reviewed By</div>
+                <div class="sig-name">Name: ___________________ &nbsp; Date: ___________</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Approved / Signed By</div>
+                <div class="sig-name">Name: ___________________ &nbsp; Date: ___________</div>
+            </div>
+        </div>
+        <div style="margin-top:1.5rem;font-size:0.8rem;color:#64748b;">
+            <strong>Official Stamp:</strong>
+            <div style="width:100px;height:100px;border:2px dashed #aaa;border-radius:50%;display:inline-block;margin-left:1rem;vertical-align:middle;"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p>This report was automatically generated by Addis Clinic — Addis Clinicointment Management System</p>
+        <p>Report ID: RPT-{{ generated_at|date:"Ymd" }}-{{ period|upper }} | Generated on {{ generated_at|date:"F d, Y" }} | Confidential</p>
+    </div>
+
+</div>
+<script>
+function downloadPDF() {
+    // Use browser print dialog with PDF destination
+    const originalTitle = document.title;
+    document.title = 'Addis Clinic_Report_{{ period_label|slugify }}_{{ generated_at|date:"Y-m-d" }}';
+    window.print();
+    document.title = originalTitle;
+}
+
+// Show/hide custom date range form
+const periodSelect = document.querySelector('.period-select select');
+if (periodSelect) {
+    periodSelect.addEventListener('change', function() {
+        const customForm = document.getElementById('customForm');
+        if (this.value === 'custom') {
+            customForm.style.display = 'flex';
+        } else {
+            customForm.style.display = 'none';
+            window.location = '/admin-dashboard/report/?period=' + this.value;
+        }
+    });
+}
+</script>
+</body>
+</html>
+

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Appointment & Medical History{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Appointment & Medical History</h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'patient_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+        {% if appointments %}
+        <div class="dropdown">
+            <button class="btn btn-danger btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                🗑 Clear History
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">Select period to preview & clear</h6></li>
+                {% for label, val in clear_options %}
+                <li><a class="dropdown-item" href="{% url 'clear_history' %}?period={{ val }}">{{ label }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if appointments %}
+    {% for appt in appointments %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>{{ appt.date|date:"l, M d Y" }} — {{ appt.doctor }}</span>
+            <div class="d-flex align-items-center gap-2">
+                <code style="font-size:0.78rem;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:4px;">{{ appt.appointment_ref }}</code>
+                <span class="badge bg-{% if appt.status == 'completed' %}success{% elif appt.status == 'confirmed' %}primary{% elif appt.status == 'pending' %}warning{% elif appt.status == 'cancelled' %}secondary{% else %}danger{% endif %}">
+                    {{ appt.status|capfirst }}
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Doctor:</strong> {{ appt.doctor }}</p>
+                    <p class="mb-1"><strong>Specialization:</strong> {{ appt.doctor.specialization|default:"General" }}</p>
+                    <p class="mb-1"><strong>Time:</strong> {{ appt.start_time|time:"g:i A" }} – {{ appt.end_time|time:"g:i A" }}</p>
+                    <p class="mb-0"><strong>Booked on:</strong> {{ appt.created_at|date:"M d Y, H:i" }}</p>
+                    {% if appt.follow_up_of %}
+                    <p class="mb-0 mt-1"><strong>Follow-up of:</strong> <code style="color:#7c3aed;">{{ appt.follow_up_of.appointment_ref }}</code></p>
+                    {% endif %}
+                    {% if appt.follow_ups.exists %}
+                    <p class="mb-0 mt-1"><strong>Has follow-up:</strong>
+                        {% for fu in appt.follow_ups.all %}
+                        <code style="color:#16a34a;">{{ fu.appointment_ref }}</code> ({{ fu.date|date:"M d, Y" }})
+                        {% endfor %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% if appt.status == 'completed' and appt.notes %}
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Visit Notes:</strong></p>
+                    <p class="text-muted">{{ appt.notes }}</p>
+                </div>
+                {% elif appt.status == 'completed' %}
+                <div class="col-md-6">
+                    <p class="text-muted">No visit notes recorded.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="text-muted">No appointment history yet.</p>
+{% endif %}
+{% endblock %}
+

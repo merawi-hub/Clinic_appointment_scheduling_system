@@ -1,0 +1,94 @@
+{% extends 'base_admin.html' %}
+{% block title %}Replacement Queue{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-clock me-2" style="color:#d97706;"></i>Patients Waiting for Replacement Doctor</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+{% if waiting %}
+{% for item in waiting %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-user me-2"></i>{{ item.patient.get_full_name|default:item.patient.username }}</span>
+        <span class="badge" style="background:#fef9c3;color:#854d0e;">Waiting since {{ item.created_at|date:"M d, H:i" }}</span>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-3"><strong>Specialization:</strong><br><span class="badge bg-primary">{{ item.specialization }}</span></div>
+            <div class="col-md-3"><strong>Original Doctor:</strong><br>{{ item.original_doctor_name }}</div>
+            <div class="col-md-3"><strong>Requested Date:</strong><br>{{ item.original_date }}</div>
+            <div class="col-md-3"><strong>Requested Time:</strong><br>{{ item.original_time|time:"g:i A" }}</div>
+        </div>
+
+        <h6 class="mb-3" style="color:#1e293b;font-weight:700;">Available {{ item.specialization }} Doctors (most recent first):</h6>
+
+        {% with available=item.specialization.doctorprofile_set.all %}
+        {% if available %}
+        <div class="row g-3">
+            {% for doc in available %}
+            {% if doc.is_available %}
+            <div class="col-md-6">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:1rem;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div style="width:36px;height:36px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.8rem;font-weight:700;flex-shrink:0;">
+                            {{ doc.user.first_name|first|upper }}{{ doc.user.last_name|first|upper }}
+                        </div>
+                        <div>
+                            <div style="font-weight:700;font-size:0.9rem;color:#1e293b;">{{ doc }}</div>
+                            <span class="badge bg-success" style="font-size:0.7rem;">Available</span>
+                        </div>
+                    </div>
+                    <!-- Doctor's weekly schedule -->
+                    {% with avails=doc.availabilities.all %}
+                    {% if avails %}
+                    <div class="mb-2">
+                        <small style="color:#64748b;font-weight:600;">Schedule:</small>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            {% for a in avails %}
+                            <span style="background:#eff6ff;color:#2563eb;padding:2px 7px;border-radius:5px;font-size:0.72rem;">
+                                {{ a.get_day_of_week_display }}: {{ a.start_time|time:"g:i A" }}–{{ a.end_time|time:"g:i A" }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <small style="color:#94a3b8;">No schedule set yet.</small>
+                    {% endif %}
+                    {% endwith %}
+                    <!-- Assign button -->
+                    <form method="post" action="{% url 'admin_assign_replacement' item.id %}" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="doctor_id" value="{{ doc.id }}">
+                        <button type="submit" class="btn btn-success btn-sm w-100"
+                            data-confirm="Assign {{ doc }} to {{ item.patient.get_full_name|default:item.patient.username }}? They will be notified of the new doctor."
+                            data-confirm-title="Assign Replacement Doctor"
+                            data-confirm-type="success">
+                            <i class="fas fa-check me-1"></i>Assign {{ doc }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-warning mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            No available {{ item.specialization }} doctors at the moment.
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-0">No patients waiting for replacement doctors.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

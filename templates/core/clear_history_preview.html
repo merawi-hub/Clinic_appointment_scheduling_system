@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Clear History Preview{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Clear History — {{ period_label }}</h4>
+    <a href="{% url 'medical_history' %}" class="btn-nav-back"><i class="fas fa-history"></i> Back to History</a>
+</div>
+
+{% if appointments %}
+<div class="alert alert-warning">
+    <strong>⚠ Review before deleting:</strong> The following <strong>{{ count }}</strong> appointment record(s)
+    from <strong>{{ period_label }}</strong> will be permanently deleted. This cannot be undone.
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Records to be deleted ({{ count }})</div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead>
+                <tr><th>Date</th><th>Doctor</th><th>Specialization</th><th>Time</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments %}
+                <tr>
+                    <td>{{ appt.date }}</td>
+                    <td>{{ appt.doctor }}</td>
+                    <td>{{ appt.doctor.specialization|default:"General" }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td><span class="badge bg-secondary">{{ appt.status|capfirst }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex gap-3">
+    <form method="post" action="{% url 'clear_history' %}">
+        {% csrf_token %}
+        <input type="hidden" name="period" value="{{ period }}">
+        <input type="hidden" name="confirm" value="yes">
+        <button type="submit" class="btn btn-danger">
+            🗑 Yes, Delete These {{ count }} Record(s)
+        </button>
+    </form>
+    <a href="{% url 'medical_history' %}" class="btn btn-outline-secondary">Cancel</a>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-4">
+        <p class="text-muted">No records found for <strong>{{ period_label }}</strong>. Nothing to clear.</p>
+        <a href="{% url 'medical_history' %}" class="btn-nav-back mt-2"><i class="fas fa-history"></i> Back to History</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

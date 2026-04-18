@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Edit Availability{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Edit Availability — {{ avail.get_day_of_week_display }}</h4>
+    <a href="{% url 'doctor_schedule' %}" class="btn-nav-back"><i class="fas fa-calendar-alt"></i> Back to Schedule</a>
+</div>
+
+<div class="card" style="max-width:500px">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Start Time</label>
+                <select name="start_time" class="form-select" id="start_time" required></select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">End Time</label>
+                <select name="end_time" class="form-select" id="end_time" required></select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Slot Duration</label>
+                <select name="slot_duration" class="form-select">
+                    <option value="15" {% if avail.slot_duration == 15 %}selected{% endif %}>15 minutes</option>
+                    <option value="30" {% if avail.slot_duration == 30 %}selected{% endif %}>30 minutes</option>
+                    <option value="45" {% if avail.slot_duration == 45 %}selected{% endif %}>45 minutes</option>
+                    <option value="60" {% if avail.slot_duration == 60 %}selected{% endif %}>60 minutes (1 hr)</option>
+                    <option value="90" {% if avail.slot_duration == 90 %}selected{% endif %}>90 minutes (1.5 hrs)</option>
+                    <option value="120" {% if avail.slot_duration == 120 %}selected{% endif %}>120 minutes (2 hrs)</option>
+                    <option value="150" {% if avail.slot_duration == 150 %}selected{% endif %}>150 minutes (2.5 hrs)</option>
+                    <option value="180" {% if avail.slot_duration == 180 %}selected{% endif %}>180 minutes (3 hrs)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const currentStart = "{{ avail.start_time|time:'H:i' }}";
+const currentEnd   = "{{ avail.end_time|time:'H:i' }}";
+
+function formatAMPM(h, m) {
+    const period = h < 12 ? 'AM' : 'PM';
+    const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${String(hour).padStart(2,'0')}:${String(m).padStart(2,'0')} ${period}`;
+}
+
+function buildTimeOptions(selectId, currentVal) {
+    const sel = document.getElementById(selectId);
+    for (let h = 6; h <= 22; h++) {
+        for (let m of [0, 30]) {
+            const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = formatAMPM(h, m);
+            if (val === currentVal) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+}
+
+buildTimeOptions('start_time', currentStart);
+buildTimeOptions('end_time', currentEnd);
+</script>
+{% endblock %}
+

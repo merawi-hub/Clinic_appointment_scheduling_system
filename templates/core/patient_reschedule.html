@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Request Reschedule{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-calendar-edit me-2"></i>Request Reschedule</h4>
+    <a href="{% url 'patient_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<!-- Current appointment info -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-calendar-check me-2"></i>Current Appointment</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><strong>Ref:</strong> <code style="color:#2563eb;">{{ appointment.appointment_ref }}</code></div>
+            <div class="col-md-3"><strong>Doctor:</strong> {{ appointment.doctor }}</div>
+            <div class="col-md-3"><strong>Date:</strong> {{ appointment.date|date:"M d, Y" }}</div>
+            <div class="col-md-3"><strong>Time:</strong> {{ appointment.start_time|time:"g:i A" }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Date selection -->
+<h5 class="mb-3">Select a New Date</h5>
+{% if upcoming_dates %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+    {% for d in upcoming_dates %}
+    <a href="?date={{ d|date:'Y-m-d' }}"
+       class="btn {% if selected_date == d|date:'Y-m-d' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <strong>{{ d|date:"D" }}</strong><br>
+        <small>{{ d|date:"M d" }}</small>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">No available dates in the next 2 weeks for this doctor.</p>
+{% endif %}
+
+{% if parsed_date %}
+<h5>Available Slots — {{ parsed_date|date:"l, M d Y" }}</h5>
+{% if slots %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="date" value="{{ selected_date }}">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for slot in slots %}
+        <div>
+            <input type="radio" class="btn-check" name="slot" id="slot_{{ forloop.counter }}" value="{{ slot|time:'H:i' }}" required>
+            <label class="btn btn-outline-success" for="slot_{{ forloop.counter }}">{{ slot|time:"g:i A" }}</label>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" style="
+        display:inline-flex;align-items:center;gap:0.5rem;
+        padding:0.5rem 1.4rem;font-size:0.88rem;font-weight:700;
+        border-radius:50px;border:none;color:#fff;
+        background:linear-gradient(135deg,#7c3aed 0%,#2563eb 50%,#0891b2 100%);
+        background-size:200% 200%;background-position:left center;
+        box-shadow:0 4px 15px rgba(124,58,237,0.4);cursor:pointer;
+        transition:background-position 0.4s ease,box-shadow 0.3s ease,transform 0.2s ease;"
+        onmouseover="this.style.backgroundPosition='right center';this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.backgroundPosition='left center';this.style.transform=''">
+        <i class="fas fa-paper-plane"></i> Submit Reschedule Request
+    </button>
+</form>
+{% else %}
+<p class="text-muted">No available slots for this date.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

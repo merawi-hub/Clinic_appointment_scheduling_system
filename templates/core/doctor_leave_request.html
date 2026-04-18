@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% block title %}Time Off{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-umbrella-beach me-2"></i>Time Off</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<!-- Submit Form -->
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-plus-circle me-2"></i>Request Time Off</div>
+    <div class="card-body">
+
+    {% if pending_annual %}
+    <div class="alert alert-warning mb-3">
+        <i class="fas fa-clock me-2"></i>
+        You have a pending annual leave request (<strong>{{ pending_annual.start_date }}</strong> to <strong>{{ pending_annual.end_date }}</strong>).
+        New bookings are blocked until admin reviews it.
+    </div>
+
+    {% if remaining_appointments %}
+    <div class="alert alert-info mb-3">
+        <i class="fas fa-calendar-check me-2"></i>
+        <strong>{{ remaining_appointments|length }} appointment(s)</strong> must be completed before your annual leave starts.
+        Your leave start date has been adjusted accordingly.
+        <div class="mt-2">
+            <table class="table table-sm mb-0" style="background:rgba(255,255,255,0.6);border-radius:8px;">
+                <thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for appt in remaining_appointments %}
+                <tr>
+                    <td>{{ appt.patient.get_full_name|default:appt.patient.username }}</td>
+                    <td>{{ appt.date }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td><span class="badge bg-{% if appt.status == 'confirmed' %}success{% else %}warning text-dark{% endif %}">{{ appt.status|capfirst }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success mb-3">
+        <i class="fas fa-check-circle me-2"></i>
+        All appointments completed. Your annual leave is ready for admin approval.
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if approved_annual %}
+    <div class="alert alert-success mb-3">
+        <i class="fas fa-check-circle me-2"></i>
+        Your annual leave is approved: <strong>{{ approved_annual.start_date }}</strong> to <strong>{{ approved_annual.end_date }}</strong>.
+        Return date: <strong>{{ approved_annual.end_date }}</strong>.
+    </div>
+    {% endif %}
+        <form method="post" class="row g-3" id="timeOffForm">
+            {% csrf_token %}
+
+            <div class="col-md-4">
+                <label class="form-label">Type</label>
+                <select name="leave_type" id="leaveType" class="form-select" required onchange="handleTypeChange(this)">
+                    {% for val, label in leave_type_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Annual leave: only start date, end auto-set -->
+            <div class="col-md-3" id="startDateCol">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="startDate" class="form-control" required
+                       min="{% now 'Y-m-d' %}" onchange="autoSetEndDate()">
+            </div>
+
+            <div class="col-md-3" id="endDateCol">
+                <label class="form-label" id="endDateLabel">End Date</label>
+                <input type="date" name="end_date" id="endDate" class="form-control" required
+                       min="{% now 'Y-m-d' %}">
+                <small id="annualNote" class="text-muted d-none">
+                    <i class="fas fa-info-circle me-1"></i>Auto-set: 21 days (international standard)
+                </small>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <!-- Attractive submit button -->
+                <button type="submit" style="
+                    display:inline-flex;align-items:center;gap:0.5rem;
+                    padding:0.55rem 1.4rem;font-size:0.88rem;font-weight:700;
+                    border-radius:50px;border:none;color:#fff;width:100%;justify-content:center;
+                    background:linear-gradient(135deg,#7c3aed 0%,#2563eb 50%,#0891b2 100%);
+                    background-size:200% 200%;background-position:left center;
+                    box-shadow:0 4px 15px rgba(124,58,237,0.4);
+                    cursor:pointer;letter-spacing:0.3px;
+                    transition:background-position 0.4s ease,box-shadow 0.3s ease,transform 0.2s ease;
+                    animation:actionGlow 3s ease-in-out infinite;"
+                    onmouseover="this.style.backgroundPosition='right center';this.style.transform='translateY(-2px) scale(1.03)';this.style.boxShadow='0 6px 24px rgba(37,99,235,0.6)';this.style.animation='none';"
+                    onmouseout="this.style.backgroundPosition='left center';this.style.transform='';this.style.boxShadow='0 4px 15px rgba(124,58,237,0.4)';this.style.animation='actionGlow 3s ease-in-out infinite';">
+                    <i class="fas fa-paper-plane"></i> Submit
+                </button>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label" id="reasonLabel">Reason <span class="text-muted" id="reasonOptional">(optional)</span><span class="text-danger d-none" id="reasonRequired"> *</span></label>
+                <textarea name="reason" id="reasonField" class="form-control" rows="3"></textarea>
+                <small id="wordCounter" class="d-none mt-1" style="font-size:0.8rem;">
+                    <span id="wordCount">0</span>/3 words minimum
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Time Off History -->
+<div class="card">
+    <div class="card-header"><i class="fas fa-history me-2"></i>My Time Off History</div>
+
+    <!-- Filter -->
+    <div class="card-body pb-0">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="leave_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for val, label in leave_type_choices %}
+                    <option value="{{ val }}" {% if type_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <select name="month" class="form-select">
+                    <option value="">All Months</option>
+                    {% for val, name in all_months %}
+                    <option value="{{ val }}" {% if month_filter == val %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Year</label>
+                <input type="number" name="year" class="form-control" value="{{ year_filter }}" min="2020" max="2030">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i>Filter</button>
+            </div>
+            {% if type_filter or month_filter %}
+            <div class="col-md-2">
+                <a href="{% url 'doctor_leave_request' %}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0">
+            <thead>
+                <tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Admin Note</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for leave in leaves %}
+                <tr>
+                    <td>{{ leave.get_leave_type_display }}</td>
+                    <td>{{ leave.start_date }}</td>
+                    <td>{{ leave.end_date }}</td>
+                    <td>{{ leave.end_date|timeuntil:leave.start_date }}</td>
+                    <td style="max-width:180px;font-size:0.82rem;">
+                        {% if leave.reason %}
+                            {% if leave.reason|length > 60 %}
+                            <span class="rm-short">{{ leave.reason|slice:":60" }}…</span>
+                            <span class="rm-full" style="display:none;">{{ leave.reason }}</span>
+                            <a href="#" style="font-size:0.75rem;white-space:nowrap;display:block;" onclick="var s=this.previousElementSibling,h=s.previousElementSibling;if(s.style.display==='none'){s.style.display='';h.style.display='none';this.textContent='Read less';}else{s.style.display='none';h.style.display='';this.textContent='Read more';}return false;">Read more</a>
+                            {% else %}{{ leave.reason }}{% endif %}
+                        {% else %}—{% endif %}
+                    </td>                    <td>
+                        <span class="badge bg-{% if leave.status == 'approved' %}success{% elif leave.status == 'rejected' %}danger{% else %}warning text-dark{% endif %}">
+                            {{ leave.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ leave.admin_note|default:"—" }}</td>
+                    <td>
+                        {% if leave.status == 'pending' %}
+                        <a href="{% url 'doctor_cancel_leave' leave.id %}"
+                           class="btn btn-sm btn-outline-danger"
+                           data-confirm="Cancel this time off request?"
+                           data-confirm-title="Cancel Time Off"
+                           data-confirm-type="warning">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        {% elif leave.status == 'approved' and leave.leave_type != 'extension' %}
+                        <button class="btn btn-sm btn-outline-warning"
+                                onclick="toggleExtend('extend-{{ leave.id }}')">
+                            <i class="fas fa-clock me-1"></i>Extend
+                        </button>
+                        {% else %}—{% endif %}
+                        <button class="btn btn-sm btn-outline-secondary ms-1 mt-1"
+                                onclick="this.closest('tr').style.display='none'"
+                                title="Clear from view">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <!-- Extend form row — hidden by default -->
+                {% if leave.status == 'approved' and leave.leave_type != 'extension' %}
+                <tr id="extend-{{ leave.id }}" style="display:none;background:#fffbeb;">
+                    <td colspan="8" style="padding:1rem 1.5rem;">
+                        <div style="border:2px solid #d97706;border-radius:10px;padding:1rem;background:#fff;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong style="color:#d97706;"><i class="fas fa-clock me-2"></i>Request Extension for: {{ leave.get_leave_type_display }} ({{ leave.start_date }} – {{ leave.end_date }})</strong>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleExtend('extend-{{ leave.id }}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <form method="post" action="{% url 'doctor_extend_leave' leave.id %}" class="row g-3">
+                                {% csrf_token %}
+                                <div class="col-md-3">
+                                    <label class="form-label fw-600">Extra Days <span class="text-danger">*</span></label>
+                                    <input type="number" name="extra_days" class="form-control" min="1" max="90" required placeholder="e.g. 7">
+                                    <small class="text-muted">Number of additional days needed</small>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-600">Reason for Extension <span class="text-danger">*</span></label>
+                                    <textarea name="reason" class="form-control" rows="3" required
+                                              placeholder="Provide a detailed reason for the extension request (min 3 words)..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" style="
+                                        display:inline-flex;align-items:center;gap:0.5rem;
+                                        padding:0.5rem 1.4rem;font-size:0.88rem;font-weight:700;
+                                        border-radius:50px;border:none;color:#fff;
+                                        background:linear-gradient(135deg,#d97706 0%,#f59e0b 100%);
+                                        box-shadow:0 4px 12px rgba(217,119,6,0.4);
+                                        cursor:pointer;transition:all 0.2s ease;"
+                                        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(217,119,6,0.55)';"
+                                        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(217,119,6,0.4)';">
+                                        <i class="fas fa-paper-plane"></i> Submit Extension Request
+                                    </button>                                </div>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No time off requests yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const ANNUAL_DAYS = 21;
+
+function handleTypeChange(sel) {
+    var isAnnual = sel.value === 'vacation';
+    var endInput = document.getElementById('endDate');
+    var annualNote = document.getElementById('annualNote');
+    var endLabel = document.getElementById('endDateLabel');
+    var reasonField = document.getElementById('reasonField');
+    var reasonOptional = document.getElementById('reasonOptional');
+    var reasonRequired = document.getElementById('reasonRequired');
+    var wordCounter = document.getElementById('wordCounter');
+
+    if (isAnnual) {
+        endInput.readOnly = true;
+        endInput.style.background = '#f1f5f9';
+        annualNote.classList.remove('d-none');
+        endLabel.textContent = 'End Date (auto)';
+        autoSetEndDate();
+        // Reason optional for annual
+        reasonField.required = false;
+        reasonOptional.classList.remove('d-none');
+        reasonRequired.classList.add('d-none');
+        wordCounter.classList.add('d-none');
+    } else {
+        endInput.readOnly = false;
+        endInput.style.background = '';
+        annualNote.classList.add('d-none');
+        endLabel.textContent = 'End Date';
+        endInput.value = '';
+        // Reason required for others
+        reasonField.required = true;
+        reasonOptional.classList.add('d-none');
+        reasonRequired.classList.remove('d-none');
+        wordCounter.classList.remove('d-none');
+        updateWordCount();
+    }
+}
+
+function updateWordCount() {
+    var text = document.getElementById('reasonField').value.trim();
+    var count = text === '' ? 0 : text.split(/\s+/).length;
+    var span = document.getElementById('wordCount');
+    span.textContent = count;
+    span.style.color = count >= 3 ? '#16a34a' : '#dc2626';
+}
+
+function autoSetEndDate() {
+    var type = document.getElementById('leaveType').value;
+    if (type !== 'vacation') return;
+    var startVal = document.getElementById('startDate').value;
+    if (!startVal) return;
+    var start = new Date(startVal);
+    start.setDate(start.getDate() + ANNUAL_DAYS - 1);
+    var y = start.getFullYear();
+    var m = String(start.getMonth() + 1).padStart(2, '0');
+    var d = String(start.getDate()).padStart(2, '0');
+    document.getElementById('endDate').value = y + '-' + m + '-' + d;
+}
+
+function toggleExtend(id) {
+    var el = document.getElementById(id);
+    var isHidden = (el.style.display === 'none' || el.style.display === '');
+    el.style.display = isHidden ? 'table-row' : 'none';
+    if (isHidden) {
+        // Scroll the extend row into view smoothly
+        setTimeout(function () {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+    } else {
+        // Scroll back to the Extend button (the row above)
+        var btn = document.querySelector('[onclick="toggleExtend(\'' + id + '\')"]');
+        if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    handleTypeChange(document.getElementById('leaveType'));
+    document.getElementById('reasonField').addEventListener('input', updateWordCount);
+
+    // After extension submit, page reloads with a message — scroll to top to show it
+    {% if messages %}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    {% endif %}
+
+    // Client-side word count check on submit
+    document.getElementById('timeOffForm').addEventListener('submit', function (e) {
+        var type = document.getElementById('leaveType').value;
+        if (type !== 'vacation') {
+            var text = document.getElementById('reasonField').value.trim();
+            var count = text === '' ? 0 : text.split(/\s+/).length;
+            if (count < 3) {
+                e.preventDefault();
+                document.getElementById('reasonField').focus();
+                document.getElementById('wordCount').style.color = '#dc2626';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

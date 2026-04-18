@@ -1,0 +1,73 @@
+{% extends 'base_admin.html' %}
+{% block title %}Specializations{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Manage Specializations</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Add New Specialization</div>
+    <div class="card-body">
+        <form method="post" class="row g-2" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            <div class="col-md-6">
+                <input type="text" name="name"
+                       class="form-control {% if spec_error %}is-invalid{% endif %}"
+                       required>
+                {% if spec_error %}
+                <div class="invalid-feedback d-block">{{ spec_error }}</div>
+                {% endif %}
+                <small class="text-muted">Letters only, 3–100 characters (e.g. Cardiology)</small>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">All Specializations ({{ specs.count }})</div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead><tr><th>#</th><th>Name</th><th>Doctors</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for s in specs %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <form method="post" class="d-flex gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="spec_id" value="{{ s.id }}">
+                            <input type="text" name="name" class="form-control form-control-sm"
+                                   value="{{ s.name }}" style="max-width:220px" required>
+                            <button type="submit" class="btn btn-warning btn-sm">Save</button>
+                        </form>
+                    </td>
+                    <td>{{ s.doctorprofile_set.count }}</td>
+                    <td>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="spec_id" value="{{ s.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                data-confirm="Delete {{ s.name }}? All doctors assigned to this specialization will become unassigned."
+                                data-confirm-title="Delete Specialization"
+                                data-confirm-type="danger">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-muted text-center">No specializations yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

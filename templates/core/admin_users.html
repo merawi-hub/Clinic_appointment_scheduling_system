@@ -1,0 +1,147 @@
+{% extends 'base_admin.html' %}
+{% block title %}Manage Users{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>User Management</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+{% if pending %}
+<div class="card mb-4 border-warning">
+    <div class="card-header" style="background-color:#7a6020;color:#fff;">
+        Pending Approvals ({{ pending.count }})
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead>
+                <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Registered</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for u in pending %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.get_full_name|default:"—" }}</td>
+                    <td>{{ u.email|default:"—" }}</td>
+                    <td><span class="badge bg-info">{{ u.role }}</span></td>
+                    <td>{{ u.date_joined|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'admin_approve_user' u.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
+                            <button name="action" value="reject" class="btn btn-danger btn-sm"
+                                data-confirm="Reject and permanently delete this registration? The user will need to re-register."
+                                data-confirm-title="Reject Registration"
+                                data-confirm-type="danger">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<h5>Active Patients</h5>
+
+<form method="get" class="mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Filter by Registration Month</label>
+            <select name="month" class="form-select">
+                <option value="">All Months</option>
+                {% for val, name in all_months %}
+                <option value="{{ val }}" {% if month_filter == val %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Year</label>
+            <input type="number" name="year" class="form-control" value="{{ year_filter }}" min="2020" max="2030">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i>Filter</button>
+        </div>
+        {% if month_filter %}
+        <div class="col-md-2">
+            <a href="{% url 'admin_users' %}" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+{% if blocked_users %}
+<div class="card mb-4" style="border:1px solid #dc2626;">
+    <div class="card-header" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+        <i class="fas fa-ban me-2"></i>Blocked Patients ({{ blocked_users.count }})
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
+            <tbody>
+                {% for u in blocked_users %}
+                <tr style="background:#fff5f5;">
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.get_full_name|default:"—" }}</td>
+                    <td>{{ u.email|default:"—" }}</td>
+                    <td>{{ u.phone|default:"—" }}</td>
+                    <td>
+                        <a href="{% url 'admin_toggle_user' u.id %}" class="btn btn-sm btn-success"
+                           data-confirm="Activate {{ u.username }}? They will be able to log in again."
+                           data-confirm-title="Activate User"
+                           data-confirm-type="success">
+                            <i class="fas fa-unlock me-1"></i>Activate
+                        </a>
+                        <form method="post" action="{% url 'admin_delete_user' u.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                data-confirm="Permanently delete {{ u.username }}?"
+                                data-confirm-title="Delete User"
+                                data-confirm-type="danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+<div class="table-responsive">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            {% if u.is_active %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.get_full_name|default:"—" }}</td>
+                <td>{{ u.email|default:"—" }}</td>
+                <td>{{ u.phone|default:"—" }}</td>
+                <td>{{ u.date_joined|date:"Y-m-d" }}</td>
+                <td><span class="badge bg-success">Active</span></td>
+                <td>
+                    <a href="{% url 'admin_toggle_user' u.id %}" class="btn btn-sm btn-warning"
+                       data-confirm="Block {{ u.username }}? They will no longer be able to log in."
+                       data-confirm-title="Block User"
+                       data-confirm-type="warning">Block</a>
+                    <form method="post" action="{% url 'admin_delete_user' u.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger"
+                            data-confirm="Permanently delete {{ u.username }}? They must re-register to use the system again."
+                            data-confirm-title="Delete User"
+                            data-confirm-type="danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr><td colspan="7" class="text-muted text-center">No patients found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

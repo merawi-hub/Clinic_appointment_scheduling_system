@@ -1,0 +1,24 @@
+{% extends 'base_auth.html' %}
+{% block title %}Login — Addis Clinic{% endblock %}
+{% block content %}
+<h4 class="form-title">Welcome back</h4>
+<p class="form-sub">Sign in to your account</p>
+<form method="post" autocomplete="on">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input type="text" name="username" id="id_username" class="form-control"
+               placeholder="Enter username" required autofocus
+               autocomplete="username">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" id="id_password" class="form-control"
+               placeholder="Enter password" required
+               autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn-auth mt-1">Sign In</button>
+</form>
+<div class="auth-footer">Don't have an account? <a href="{% url 'register' %}">Register here</a></div>
+{% endblock %}
+

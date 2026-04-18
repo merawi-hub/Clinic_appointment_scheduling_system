@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Addis Clinic — Your Health, Our Priority</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;overflow-x:hidden}
+.navbar-top{position:fixed;top:0;left:0;right:0;z-index:1000;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;transition:all .3s}
+.navbar-top.scrolled{background:rgba(15,23,42,.95);backdrop-filter:blur(12px);padding:.6rem 2rem;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.brand{color:#fff;font-size:1.2rem;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:.5rem}
+.brand-ico{width:34px;height:34px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem}
+.nav-links{display:flex;align-items:center;gap:.4rem}
+.nav-links a{color:rgba(255,255,255,.8);text-decoration:none;font-size:.875rem;font-weight:500;padding:.35rem .75rem;border-radius:8px;transition:all .2s}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.1)}
+.btn-login{border:1px solid rgba(255,255,255,.35)!important;border-radius:20px!important;padding:.35rem 1.1rem!important}
+.btn-register{background:linear-gradient(135deg,#2563eb,#0891b2)!important;border:none!important;border-radius:20px!important;padding:.35rem 1.1rem!important;box-shadow:0 4px 12px rgba(37,99,235,.4)}
+.btn-register:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.5)!important}
+/* HERO */
+.hero{min-height:100vh;background:linear-gradient(145deg,#0a0f1e 0%,#0d1b3e 35%,#0a2a4a 65%,#0d3b5e 100%);display:flex;align-items:center;padding:6rem 0 4rem;position:relative;overflow:hidden}
+.orb{position:absolute;border-radius:50%;animation:orb 8s ease-in-out infinite}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(37,99,235,.12) 0%,transparent 70%);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(8,145,178,.1) 0%,transparent 70%);bottom:-100px;left:-80px;animation-delay:-4s}
+@keyframes orb{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.05)}}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.4);color:#93c5fd;font-size:.78rem;font-weight:600;padding:.35rem .9rem;border-radius:20px;margin-bottom:1.5rem}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);font-weight:900;color:#fff;line-height:1.1;margin-bottom:1.5rem}
+.hero h1 .hl{background:linear-gradient(135deg,#60a5fa,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.05rem;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:2rem;max-width:500px}
+.btn-hp{background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;padding:.85rem 2rem;border-radius:12px;font-size:.95rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;box-shadow:0 8px 24px rgba(37,99,235,.4);transition:all .3s}
+.btn-hp:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(37,99,235,.5);color:#fff}
+.btn-hs{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);padding:.85rem 2rem;border-radius:12px;font-size:.95rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;backdrop-filter:blur(8px);transition:all .3s}
+.btn-hs:hover{background:rgba(255,255,255,.2);color:#fff;transform:translateY(-3px)}
+.hero-stats{display:flex;gap:2rem;margin-top:3rem;flex-wrap:wrap}
+.hstat .num{font-size:2rem;font-weight:800;color:#fff;line-height:1}
+.hstat .lbl{font-size:.75rem;color:rgba(255,255,255,.5);font-weight:500;margin-top:2px}
+.hdiv{width:1px;background:rgba(255,255,255,.15);align-self:stretch}
+.float-card{background:rgba(255,255,255,.07);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:.9rem;transition:transform .3s}
+.float-card:hover{transform:translateX(-8px)}
+/* SECTIONS */
+section{padding:5rem 0}
+.sec-badge{display:inline-flex;align-items:center;gap:.4rem;background:#eff6ff;color:#2563eb;font-size:.75rem;font-weight:700;padding:.3rem .85rem;border-radius:20px;margin-bottom:.9rem;text-transform:uppercase;letter-spacing:.5px}
+.sec-title{font-size:clamp(1.7rem,3vw,2.4rem);font-weight:800;color:#1e293b;margin-bottom:.9rem;line-height:1.2}
+.sec-sub{font-size:.95rem;color:#64748b;max-width:540px;line-height:1.7}
+/* FEATURES */
+.feat-card{background:#fff;border-radius:16px;padding:1.8rem;border:1px solid #e2e8f0;transition:all .3s;height:100%}
+.feat-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,.1);border-color:#bfdbfe}
+.feat-ico{width:52px;height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:1.1rem}
+/* STEPS */
+.step-num{width:58px;height:58px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;color:#fff;margin:0 auto 1.1rem;box-shadow:0 8px 20px rgba(37,99,235,.3)}
+/* SPECS */
+.spec-sec{background:linear-gradient(135deg,#0f172a,#1e3a5f)}
+.spec-chip{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:#e2e8f0;padding:.55rem 1.1rem;border-radius:30px;font-size:.85rem;font-weight:500;transition:all .3s;cursor:default}
+.spec-chip:hover{background:rgba(37,99,235,.3);border-color:rgba(37,99,235,.5);color:#fff;transform:translateY(-2px)}
+/* DOCTORS */
+.doc-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;transition:all .3s}
+.doc-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,.1)}
+.doc-av{width:76px;height:76px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff;margin:0 auto 1rem}
+/* CTA */
+.cta-sec{background:linear-gradient(135deg,#1e3a5f,#2563eb,#0891b2);position:relative;overflow:hidden}
+.cta-sec::before{content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;background:rgba(255,255,255,.05);border-radius:50%}
+/* FOOTER */
+footer{background:#0f172a;color:rgba(255,255,255,.55);padding:3rem 0 1.5rem}
+footer .fb{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+footer a{color:rgba(255,255,255,.45);text-decoration:none;font-size:.85rem;transition:color .2s}
+footer a:hover{color:#fff}
+footer hr{border-color:rgba(255,255,255,.1);margin:2rem 0 1rem}
+/* ANIM */
+.aos{opacity:0;transform:translateY(28px);transition:all .6s ease}
+.aos.in{opacity:1;transform:translateY(0)}
+@media(max-width:768px){.navbar-top{padding:.75rem 1rem}.nav-links a:not(.btn-login):not(.btn-register){display:none}}
+</style>
+</head>
+<body>
+
+<nav class="navbar-top" id="nav">
+    <a href="/" class="brand"><div class="brand-ico"><i class="fas fa-hospital-alt"></i></div>Addis Clinic</a>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how">How It Works</a>
+        <a href="#specs">Specializations</a>
+        <a href="#doctors">Doctors</a>
+        <a href="{% url 'login' %}" class="btn-login">Login</a>
+        <a href="{% url 'register' %}" class="btn-register" style="color:#fff;">Get Started</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="orb orb1"></div><div class="orb orb2"></div>
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="hero-badge"><i class="fas fa-shield-alt"></i>Trusted Healthcare Platform</div>
+                <h1>Your Health,<br><span class="hl">Our Priority</span></h1>
+                <p>Book appointments with top doctors in Kombolcha. Fast, secure, and hassle-free. Your health journey starts here.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'register' %}" class="btn-hp"><i class="fas fa-calendar-plus"></i>Book Appointment</a>
+                    <a href="#how" class="btn-hs"><i class="fas fa-play-circle"></i>How It Works</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="hstat"><div class="num">{{ stats.doctors }}+</div><div class="lbl">Doctors</div></div>
+                    <div class="hdiv"></div>
+                    <div class="hstat"><div class="num">{{ stats.patients }}+</div><div class="lbl">Patients</div></div>
+                    <div class="hdiv"></div>
+                    <div class="hstat"><div class="num">{{ stats.appointments }}+</div><div class="lbl">Appointments</div></div>
+                    <div class="hdiv"></div>
+                    <div class="hstat"><div class="num">{{ stats.specializations }}+</div><div class="lbl">Specialties</div></div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="float-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:46px;height:46px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;"><i class="fas fa-calendar-check"></i></div>
+                        <div><div style="color:#fff;font-weight:700;font-size:.9rem;">Appointment Confirmed</div><div style="color:rgba(255,255,255,.5);font-size:.75rem;">Dr. Merawi · Tomorrow 9:00 AM</div></div>
+                        <span style="margin-left:auto;background:rgba(22,163,74,.2);color:#86efac;font-size:.7rem;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap;">✓ Confirmed</span>
+                    </div>
+                </div>
+                <div class="float-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:46px;height:46px;background:linear-gradient(135deg,#7c3aed,#0891b2);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;"><i class="fas fa-user-md"></i></div>
+                        <div><div style="color:#fff;font-weight:700;font-size:.9rem;">Find the Right Doctor</div><div style="color:rgba(255,255,255,.5);font-size:.75rem;">Search by specialty, name or availability</div></div>
+                    </div>
+                </div>
+                <div class="float-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:46px;height:46px;background:linear-gradient(135deg,#d97706,#dc2626);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;"><i class="fas fa-bell"></i></div>
+                        <div><div style="color:#fff;font-weight:700;font-size:.9rem;">Instant Notifications</div><div style="color:rgba(255,255,255,.5);font-size:.75rem;">Email & in-app updates in real time</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section style="background:#f8fafc;" id="features">
+    <div class="container">
+        <div class="text-center mb-5 aos">
+            <div class="sec-badge"><i class="fas fa-star"></i>Why Choose Us</div>
+            <h2 class="sec-title">Everything You Need for Better Healthcare</h2>
+            <p class="sec-sub mx-auto">A complete clinic management system designed for patients, doctors, and administrators.</p>
+        </div>
+        <div class="row g-4">
+            {% for icon,color,bg,title,desc in features %}
+            <div class="col-md-6 col-lg-4 aos">
+                <div class="feat-card">
+                    <div class="feat-ico" style="background:{{ bg }};color:{{ color }};"><i class="{{ icon }}"></i></div>
+                    <h5 style="font-weight:700;margin-bottom:.5rem;color:#1e293b;">{{ title }}</h5>
+                    <p style="color:#64748b;font-size:.875rem;line-height:1.6;margin:0;">{{ desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background:#fff;" id="how">
+    <div class="container">
+        <div class="text-center mb-5 aos">
+            <div class="sec-badge"><i class="fas fa-route"></i>Simple Process</div>
+            <h2 class="sec-title">Book in 3 Easy Steps</h2>
+            <p class="sec-sub mx-auto">Getting the care you need has never been easier.</p>
+        </div>
+        <div class="row g-4 text-center">
+            <div class="col-md-4 aos">
+                <div class="step-num">1</div>
+                <h5 style="font-weight:700;margin-bottom:.75rem;color:#1e293b;">Create Account</h5>
+                <p style="color:#64748b;font-size:.875rem;line-height:1.6;">Register as a patient in minutes. Your account is reviewed and approved by our admin team.</p>
+            </div>
+            <div class="col-md-4 aos" style="transition-delay:.1s">
+                <div class="step-num">2</div>
+                <h5 style="font-weight:700;margin-bottom:.75rem;color:#1e293b;">Find Your Doctor</h5>
+                <p style="color:#64748b;font-size:.875rem;line-height:1.6;">Search by specialty, name, or availability. View doctor profiles and available time slots.</p>
+            </div>
+            <div class="col-md-4 aos" style="transition-delay:.2s">
+                <div class="step-num">3</div>
+                <h5 style="font-weight:700;margin-bottom:.75rem;color:#1e293b;">Book & Get Notified</h5>
+                <p style="color:#64748b;font-size:.875rem;line-height:1.6;">Select your slot and confirm. Receive email notifications when your doctor responds.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SPECIALIZATIONS -->
+<section class="spec-sec" id="specs">
+    <div class="container">
+        <div class="text-center mb-5 aos">
+            <div class="sec-badge" style="background:rgba(255,255,255,.1);color:#93c5fd;"><i class="fas fa-stethoscope"></i>Medical Specialties</div>
+            <h2 class="sec-title" style="color:#fff;">{{ stats.specializations }} Specializations Available</h2>
+            <p class="sec-sub mx-auto" style="color:rgba(255,255,255,.6);">Our doctors cover a wide range of medical specialties to meet all your healthcare needs.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-center aos">
+            {% for spec in specializations_with_doctors %}
+            <span class="spec-chip"><i class="fas fa-circle" style="font-size:.35rem;"></i>{{ spec.name }}
+                <span style="background:rgba(255,255,255,0.15);border-radius:10px;padding:1px 7px;font-size:0.7rem;margin-left:4px;">{{ spec.doc_count }}</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- DOCTORS BY SPECIALIZATION - Accordion -->
+{% if specializations_with_doctors %}
+<section style="background:#f8fafc;" id="doctors">
+    <div class="container">
+        <div class="text-center mb-5 aos">
+            <div class="sec-badge"><i class="fas fa-user-md"></i>Our Medical Team</div>
+            <h2 class="sec-title">Get Your Doctors</h2>
+            <p class="sec-sub mx-auto">Click a specialization to see available doctors.</p>
+        </div>
+
+        <!-- Specialization chips (clickable) -->
+        <div class="d-flex flex-wrap gap-2 justify-content-center mb-4 aos">
+            {% for spec in specializations_with_doctors %}
+            {% if spec.doctors %}
+            <button class="spec-toggle-btn" data-target="spec-{{ spec.id }}"
+                onclick="toggleSpec('spec-{{ spec.id }}', this)"
+                style="display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;padding:0.6rem 1.3rem;border-radius:30px;font-size:0.875rem;font-weight:600;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+                <i class="fas fa-stethoscope" style="font-size:0.8rem;"></i>
+                {{ spec.name }}
+                <span style="background:rgba(255,255,255,0.2);border-radius:10px;padding:1px 8px;font-size:0.72rem;">{{ spec.doctors|length }}</span>
+                <i class="fas fa-chevron-down" style="font-size:0.7rem;transition:transform 0.3s;" id="icon-spec-{{ spec.id }}"></i>
+            </button>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Doctor cards per specialization (hidden by default) -->
+        {% for spec in specializations_with_doctors %}
+        {% if spec.doctors %}
+        <div id="spec-{{ spec.id }}" style="display:none;margin-bottom:1.5rem;animation:fadeInUp 0.4s ease;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;padding:0.75rem 1rem;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px;">
+                <i class="fas fa-stethoscope" style="color:#fff;font-size:1rem;"></i>
+                <h6 style="color:#fff;margin:0;font-weight:700;">{{ spec.name }}</h6>
+                <span style="background:rgba(255,255,255,0.2);color:#fff;border-radius:10px;padding:2px 10px;font-size:0.75rem;margin-left:auto;">{{ spec.doctors|length }} doctor{{ spec.doctors|length|pluralize }}</span>
+            </div>
+            <div class="row g-3">
+                {% for doc in spec.doctors %}
+                <div class="col-md-6 col-lg-3">
+                    <div class="doc-card" style="transition:all 0.3s;cursor:default;">
+                        <div style="padding:1.2rem;text-align:center;">
+                            <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;margin:0 auto 0.75rem;">
+                                {{ doc.user.first_name|first|upper }}{{ doc.user.last_name|first|upper }}
+                            </div>
+                            <h6 style="font-weight:700;margin-bottom:0.2rem;color:#1e293b;font-size:0.9rem;">{{ doc }}</h6>
+                            <p style="color:#2563eb;font-size:0.75rem;font-weight:600;margin-bottom:0.6rem;">{{ spec.name }}</p>
+                            {% if doc.bio %}<p style="color:#64748b;font-size:0.75rem;line-height:1.4;margin-bottom:0.75rem;">{{ doc.bio|truncatechars:55 }}</p>{% endif %}
+                            <!-- Book button -->
+                            <a href="{% url 'register' %}" class="btn btn-primary btn-sm w-100" style="border-radius:8px;font-size:0.78rem;">
+                                <i class="fas fa-calendar-plus me-1"></i>Book Appointment
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</section>
+
+<style>
+.spec-toggle-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(37,99,235,0.4)!important; }
+.spec-toggle-btn.active { background:linear-gradient(135deg,#0891b2,#2563eb)!important; box-shadow:0 8px 20px rgba(8,145,178,0.4)!important; }
+@keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+<script>
+function toggleSpec(id, btn) {
+    const panel = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    const isOpen = panel.style.display !== 'none';
+
+    // Close all
+    document.querySelectorAll('[id^="spec-"]').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('[id^="icon-spec-"]').forEach(i => { i.style.transform = 'rotate(0deg)'; });
+    document.querySelectorAll('.spec-toggle-btn').forEach(b => b.classList.remove('active'));
+
+    if (!isOpen) {
+        panel.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+        btn.classList.add('active');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+</script>
+{% endif %}
+
+<!-- CTA -->
+<section class="cta-sec">
+    <div class="container text-center" style="position:relative;z-index:1;padding:4rem 0;">
+        <div class="aos">
+            <h2 style="color:#fff;font-size:2.4rem;font-weight:800;margin-bottom:1rem;">Ready to Take Control<br>of Your Health?</h2>
+            <p style="color:rgba(255,255,255,.75);font-size:1rem;margin-bottom:2rem;max-width:480px;margin-left:auto;margin-right:auto;">Join thousands of patients who trust Addis Clinic for their healthcare needs.</p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="{% url 'register' %}" class="btn-hp" style="font-size:.95rem;padding:.85rem 2.2rem;"><i class="fas fa-user-plus"></i>Create Free Account</a>
+                <a href="{% url 'login' %}" class="btn-hs" style="font-size:.95rem;padding:.85rem 2.2rem;"><i class="fas fa-sign-in-alt"></i>Sign In</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="fb"><div class="brand-ico"><i class="fas fa-hospital-alt"></i></div>Addis Clinic</div>
+                <p style="font-size:.85rem;line-height:1.6;">Your trusted clinic appointment scheduling system. Quality healthcare, simplified.</p>
+            </div>
+            <div class="col-md-2">
+                <h6 style="color:#fff;font-weight:700;margin-bottom:1rem;">Quick Links</h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="#features">Features</a><a href="#how">How It Works</a>
+                    <a href="#specs">Specializations</a><a href="#doctors">Doctors</a>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <h6 style="color:#fff;font-weight:700;margin-bottom:1rem;">Account</h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{% url 'register' %}">Register as Patient</a>
+                    <a href="{% url 'login' %}">Login</a>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <h6 style="color:#fff;font-weight:700;margin-bottom:1rem;">Contact</h6>
+                <div class="d-flex flex-column gap-2" style="font-size:.85rem;">
+                    <span><i class="fas fa-map-marker-alt me-2" style="color:#2563eb;"></i>Addis Ababa, Ethiopia</span>
+                    <span><i class="fas fa-envelope me-2" style="color:#2563eb;"></i>info@addisclinic.com</span>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between flex-wrap gap-2" style="font-size:.78rem;">
+            <span>© 2026 Addis Clinic. All rights reserved.</span>
+            <span>Built with <i class="fas fa-heart" style="color:#ef4444;"></i> for better healthcare</span>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('scrolled',scrollY>50));
+const obs=new IntersectionObserver(entries=>entries.forEach((e,i)=>{if(e.isIntersecting)setTimeout(()=>e.target.classList.add('in'),i*80)}),{threshold:.1});
+document.querySelectorAll('.aos').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>

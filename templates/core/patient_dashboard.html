@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard — Addis Clinic{% endblock %}
+{% block content %}
+
+<!-- Hero Banner -->
+<div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#0891b2 100%);border-radius:16px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+    <div style="position:absolute;bottom:-60px;right:60px;width:150px;height:150px;background:rgba(255,255,255,0.04);border-radius:50%;"></div>
+    <div class="d-flex align-items-center gap-3" style="position:relative;z-index:1;">
+        <div style="width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;color:#fff;flex-shrink:0;border:2px solid rgba(255,255,255,0.3);">
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+        </div>
+        <div>
+            <h4 style="color:#fff;margin:0;font-size:1.4rem;font-weight:800;">Welcome, {{ user.get_full_name|default:user.username }}</h4>
+            <p style="color:rgba(255,255,255,0.7);margin:0;font-size:0.85rem;"><i class="fas fa-user-circle me-1"></i>Patient Account</p>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="{% url 'search_doctors' %}" class="btn-action"><i class="fas fa-search me-1"></i>Find a Doctor</a>
+            <a href="{% url 'medical_history' %}" class="btn-card-action"><i class="fas fa-history me-1"></i>Medical History</a>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a href="#upcoming" class="stat-card d-block text-decoration-none" style="border-left-color:#2563eb;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#2563eb;line-height:1;">{{ upcoming.count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-calendar-check me-1"></i>Upcoming Appointments</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(37,99,235,0.35);">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="#past" class="stat-card d-block text-decoration-none" style="border-left-color:#64748b;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#64748b;line-height:1;">{{ past.count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-history me-1"></i>Past Appointments</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#475569,#64748b);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(71,85,105,0.35);">
+                    <i class="fas fa-history"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'medical_history' %}" class="stat-card d-block text-decoration-none" style="border-left-color:#16a34a;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div style="font-size:2.2rem;font-weight:800;color:#16a34a;line-height:1;">{{ medical_count }}</div>
+                    <div style="font-size:0.8rem;color:#64748b;font-weight:500;margin-top:4px;"><i class="fas fa-notes-medical me-1"></i>Medical Records</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#16a34a,#22c55e);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;box-shadow:0 4px 12px rgba(22,163,74,0.35);">
+                    <i class="fas fa-notes-medical"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Upcoming Appointments -->
+<div id="upcoming" class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calendar-check me-2"></i>Upcoming Appointments</span>
+        <a href="{% url 'search_doctors' %}" class="btn-card-action"><i class="fas fa-plus me-1"></i>Book New</a>
+    </div>
+    {% if upcoming %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Ref</th><th>Doctor</th><th>Specialty</th><th>Date</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+                {% for appt in upcoming %}
+                <tr>
+                    <td>
+                        <code style="font-size:0.78rem;color:#2563eb;background:#eff6ff;padding:2px 6px;border-radius:4px;">
+                            {{ appt.appointment_ref }}
+                        </code>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:32px;height:32px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;flex-shrink:0;">
+                                {{ appt.doctor.user.first_name|first|upper }}{{ appt.doctor.user.last_name|first|upper }}
+                            </div>
+                            <span style="font-weight:600;">{{ appt.doctor }}</span>
+                        </div>
+                    </td>
+                    <td><span style="font-size:0.82rem;color:#64748b;">{{ appt.doctor.specialization|default:"General" }}</span></td>
+                    <td><span style="font-weight:500;">{{ appt.date|date:"M d, Y" }}</span></td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td>
+                        <span class="badge" style="background:{% if appt.status == 'confirmed' %}#dcfce7;color:#166534{% elif appt.status == 'pending' %}#fef9c3;color:#854d0e{% elif appt.status == 'rescheduled' %}#f3e8ff;color:#6b21a8{% else %}#fee2e2;color:#991b1b{% endif %};">
+                            <i class="fas fa-{% if appt.status == 'confirmed' %}check{% elif appt.status == 'pending' %}clock{% else %}times{% endif %} me-1"></i>{{ appt.status|capfirst }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if appt.status in 'pending,confirmed' %}
+                        <div class="d-flex gap-1 flex-wrap">
+                        <a href="{% url 'patient_reschedule' appt.id %}" class="btn btn-sm btn-outline-warning">
+                            <i class="fas fa-calendar-edit me-1"></i>Reschedule
+                        </a>
+                        <a href="{% url 'cancel_appointment' appt.id %}" class="btn btn-sm btn-outline-danger"
+                           data-confirm="Cancel this appointment with {{ appt.doctor }} on {{ appt.date|date:'M d, Y' }}?"
+                           data-confirm-title="Cancel Appointment"
+                           data-confirm-type="danger">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        </div>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-5">
+        <i class="fas fa-calendar-times" style="font-size:3rem;color:#e2e8f0;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-3">No upcoming appointments.</p>
+        <a href="{% url 'search_doctors' %}" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Find a Doctor</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Past Appointments -->
+<div id="past" class="card">
+    <div class="card-header"><i class="fas fa-history me-2"></i>Past Appointments</div>
+    {% if past %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Ref</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for appt in past %}
+                <tr>
+                    <td><code style="font-size:0.78rem;color:#64748b;background:#f1f5f9;padding:2px 6px;border-radius:4px;">{{ appt.appointment_ref }}</code></td>
+                    <td><span style="font-weight:600;">{{ appt.doctor }}</span></td>
+                    <td>{{ appt.date|date:"M d, Y" }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td><span class="badge" style="background:#f1f5f9;color:#475569;">{{ appt.status|capfirst }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-4">
+        <p class="text-muted mb-0"><i class="fas fa-inbox me-2"></i>No past appointments.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

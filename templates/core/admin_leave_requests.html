@@ -1,0 +1,128 @@
+{% extends 'base_admin.html' %}
+{% block title %}Time Off Requests{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-calendar-minus me-2"></i>Doctor Time Off Requests</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card">
+    <!-- Filter -->
+    <div class="card-body pb-0">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="leave_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for val, label in leave_type_choices %}
+                    <option value="{{ val }}" {% if type_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <select name="month" class="form-select">
+                    <option value="">All Months</option>
+                    {% for val, name in all_months %}
+                    <option value="{{ val }}" {% if month_filter == val %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Year</label>
+                <input type="number" name="year" class="form-control" value="{{ year_filter }}" min="2020" max="2030">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i>Filter</button>
+            </div>
+            {% if type_filter or month_filter %}
+            <div class="col-md-2">
+                <a href="{% url 'admin_leave_requests' %}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0">
+            <thead>
+                <tr><th>Doctor</th><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Affected Appts</th><th></th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for leave in leaves %}
+                <tr>
+                    <td><strong>{{ leave.doctor }}</strong></td>
+                    <td>{{ leave.get_leave_type_display }}</td>
+                    <td>{{ leave.start_date }}</td>
+                    <td>{{ leave.end_date }}</td>
+                    <td style="max-width:200px;font-size:0.82rem;">
+                        {% if leave.reason %}
+                            {% if leave.reason|length > 60 %}
+                            <span class="rm-short">{{ leave.reason|slice:":60" }}…</span>
+                            <span class="rm-full" style="display:none;">{{ leave.reason }}</span>
+                            <a href="#" style="font-size:0.75rem;white-space:nowrap;display:block;" onclick="var s=this.previousElementSibling,h=s.previousElementSibling;if(s.style.display==='none'){s.style.display='';h.style.display='none';this.textContent='Read less';}else{s.style.display='none';h.style.display='';this.textContent='Read more';}return false;">Read more</a>
+                            {% else %}{{ leave.reason }}{% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if leave.leave_type != 'vacation' and leave.status == 'pending' %}
+                            {% with affected=leave.doctor.appointments.all %}
+                            {% comment %}Count appointments in leave range{% endcomment %}
+                            <span class="badge bg-warning text-dark">
+                                {{ leave.doctor.appointments.all|length }} total
+                            </span>
+                            {% endwith %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-{% if leave.status == 'approved' %}success{% elif leave.status == 'rejected' %}danger{% else %}warning text-dark{% endif %}">
+                            {{ leave.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if leave.status == 'pending' %}
+                        <form method="post" action="{% url 'admin_handle_leave' leave.id %}" class="d-flex gap-1 align-items-start flex-column">
+                            {% csrf_token %}
+                            {% if leave.leave_type == 'extension' %}
+                            <div style="background:#fffbeb;border:1px solid #d97706;border-radius:8px;padding:0.6rem;width:100%;margin-bottom:0.4rem;">
+                                <small class="fw-600" style="color:#d97706;"><i class="fas fa-clock me-1"></i>Extension Request</small><br>
+                                <small class="text-muted">Original leave ended: check reason above</small>
+                            </div>
+                            {% endif %}
+                            <textarea name="admin_note" class="form-control form-control-sm mb-1"
+                                      rows="2" placeholder="Response / note (optional)" style="min-width:180px;"></textarea>
+                            <div class="d-flex gap-1">
+                                <button name="action" value="approve" class="btn btn-success btn-sm"
+                                    data-confirm="Approve this time off request? Affected appointments will be automatically reassigned or postponed."
+                                    data-confirm-title="Approve Time Off"
+                                    data-confirm-type="success">
+                                    <i class="fas fa-check me-1"></i>Approve
+                                </button>
+                                <button name="action" value="reject" class="btn btn-danger btn-sm"
+                                    data-confirm="Reject this time off request?"
+                                    data-confirm-title="Reject Time Off"
+                                    data-confirm-type="danger">
+                                    <i class="fas fa-times me-1"></i>Reject
+                                </button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <span class="text-muted" style="font-size:0.82rem;">{{ leave.admin_note|default:"—" }}</span>
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-secondary mt-1"
+                                onclick="this.closest('tr').style.display='none'"
+                                title="Clear from view">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No time off requests.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+<script>
+</script>

@@ -1,0 +1,63 @@
+{% extends 'base_admin.html' %}
+{% block title %}Assign Replacement{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Assign Replacement Doctor</h4>
+    <a href="{% url 'admin_replacement_queue' %}" class="btn-nav-back"><i class="fas fa-clock"></i> Queue</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Patient Details</div>
+    <div class="card-body">
+        <p><strong>Patient:</strong> {{ item.patient.get_full_name|default:item.patient.username }}</p>
+        <p><strong>Specialization Needed:</strong> {{ item.specialization }}</p>
+        <p><strong>Original Doctor:</strong> {{ item.original_doctor_name }}</p>
+        <p><strong>Requested Date:</strong> {{ item.original_date }}</p>
+        <p class="mb-0"><strong>Requested Time:</strong> {{ item.original_time|time:"g:i A" }}</p>
+    </div>
+</div>
+
+{% if available_doctors %}
+<div class="card">
+    <div class="card-header">Available {{ item.specialization }} Doctors & Their Schedules</div>
+    <div class="card-body">
+        {% for doc in available_doctors %}
+        <div class="mb-3 p-3" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <strong>{{ doc }}</strong>
+                    <span class="badge bg-success ms-2">Available</span>
+                </div>
+            </div>
+            {% with avails=doc.availabilities.all %}
+            {% if avails %}
+            <div class="mb-2">
+                <small class="text-muted">Schedule:</small>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    {% for a in avails %}
+                    <span style="background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:6px;font-size:0.78rem;">
+                        {{ a.get_day_of_week_display }}: {{ a.start_time|time:"g:i A" }}–{{ a.end_time|time:"g:i A" }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="doctor_id" value="{{ doc.id }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="fas fa-check me-1"></i>Assign {{ doc }} & Notify Patient
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    No available {{ item.specialization }} doctors at the moment. The patient remains in the waiting queue.
+</div>
+{% endif %}
+{% endblock %}

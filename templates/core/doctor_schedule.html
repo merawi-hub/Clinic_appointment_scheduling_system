@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}My Schedule{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>My Schedule</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Add Availability</div>
+    <div class="card-body">
+        <form method="post" class="row g-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            <div class="col-md-3">
+                <select name="day_of_week" class="form-select" id="day_select" required>
+                    <option value="">Select Day</option>
+                    {% for val, label in day_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="start_time" class="form-select" id="add_start" required></select>
+            </div>
+            <div class="col-md-2">
+                <select name="end_time" class="form-select" id="add_end" required></select>
+            </div>
+            <div class="col-md-2">
+                <select name="slot_duration" class="form-select" id="slot_duration">
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">60 min (1 hr)</option>
+                    <option value="90">90 min (1.5 hrs)</option>
+                    <option value="120">120 min (2 hrs)</option>
+                    <option value="150">150 min (2.5 hrs)</option>
+                    <option value="180">180 min (3 hrs)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h5>Current Availability</h5>
+{% if availabilities %}
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr><th>Day</th><th>Start</th><th>End</th><th>Slot</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        {% for a in availabilities %}
+        <tr>
+            <td>{{ a.get_day_of_week_display }}</td>
+            <td>{{ a.start_time|time:"g:i A" }}</td>
+            <td>{{ a.end_time|time:"g:i A" }}</td>
+            <td>{{ a.slot_duration }} min</td>
+            <td>
+                <a href="{% url 'edit_availability' a.id %}" class="btn btn-warning btn-sm">Edit</a>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="avail_id" value="{{ a.id }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No availability set yet.</p>
+{% endif %}
+
+<script>
+function formatAMPM(h, m) {
+    const period = h < 12 ? 'AM' : 'PM';
+    const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${String(hour).padStart(2,'0')}:${String(m).padStart(2,'0')} ${period}`;
+}
+
+function buildTimeOptions(selectId, defaultVal, minVal) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '';
+    for (let h = 6; h <= 23; h++) {
+        for (let m of [0, 30]) {
+            const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            if (minVal && val < minVal) continue;
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = formatAMPM(h, m);
+            if (val === defaultVal) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+    // Add 00:00 (midnight) as last end-time option
+    if (selectId === 'add_end') {
+        const opt = document.createElement('option');
+        opt.value = '24:00'; opt.textContent = '12:00 AM (midnight)';
+        sel.appendChild(opt);
+    }
+    if (sel.selectedIndex < 0 && sel.options.length > 0) sel.selectedIndex = 0;
+}
+
+function getMinStartForDay(dowValue) {
+    const now = new Date();
+    const todayDow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    if (parseInt(dowValue) === todayDow) {
+        const minTime = new Date(now.getTime() + 10 * 60000);
+        let h = minTime.getHours(), m = minTime.getMinutes();
+        if (m > 0 && m <= 30) m = 30;
+        else if (m > 30) { m = 0; h += 1; }
+        if (h > 23) return null;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    return null;
+}
+
+const ALL_SLOTS = [
+    {val:'15',label:'15 min'},{val:'30',label:'30 min'},{val:'45',label:'45 min'},
+    {val:'60',label:'60 min (1 hr)'},{val:'90',label:'90 min (1.5 hrs)'},
+    {val:'120',label:'120 min (2 hrs)'},{val:'150',label:'150 min (2.5 hrs)'},{val:'180',label:'180 min (3 hrs)'}
+];
+
+function updateSlotDurations() {
+    const sv = document.getElementById('add_start').value;
+    const ev = document.getElementById('add_end').value;
+    const sel = document.getElementById('slot_duration');
+    if (!sv || !ev) return;
+    const [sh,sm] = sv.split(':').map(Number);
+    const [eh,em] = ev.split(':').map(Number);
+    const w = (eh*60+em)-(sh*60+sm);
+    const prev = sel.value;
+    sel.innerHTML = '';
+    ALL_SLOTS.forEach(s => {
+        if (parseInt(s.val) <= w && w > 0) {
+            const o = document.createElement('option');
+            o.value = s.val; o.textContent = s.label;
+            if (s.val === prev) o.selected = true;
+            sel.appendChild(o);
+        }
+    });
+    if (sel.selectedIndex < 0 && sel.options.length > 0) sel.selectedIndex = 0;
+}
+
+buildTimeOptions('add_start', '09:00', null);
+buildTimeOptions('add_end', '17:00', null);
+
+document.getElementById('add_start').addEventListener('change', updateSlotDurations);
+document.getElementById('add_end').addEventListener('change', updateSlotDurations);
+
+document.getElementById('day_select').addEventListener('change', function() {
+    const minVal = getMinStartForDay(this.value);
+    buildTimeOptions('add_start', minVal || '09:00', minVal);
+    buildTimeOptions('add_end', '17:00', null);
+    updateSlotDurations();
+});
+</script>
+{% endblock %}

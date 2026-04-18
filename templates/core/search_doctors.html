@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Find a Doctor{% endblock %}
+{% block content %}
+<h4 class="mb-4">Find a Doctor</h4>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Search by name or username..." value="{{ query }}">
+            </div>
+            <div class="col-md-3">
+                <select name="specialty" class="form-select">
+                    <option value="">All Specialties</option>
+                    {% for s in specializations %}
+                        <option value="{{ s.id }}" {% if selected_specialty == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="day" class="form-select">
+                    <option value="">Any Day</option>
+                    {% for val, label in day_choices %}
+                        <option value="{{ val }}" {% if selected_day == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not searched %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-search" style="font-size:3rem;color:#e2e8f0;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-0">Use the search above to find available doctors.<br>Search by name, specialty, or available day.</p>
+    </div>
+</div>
+{% elif doctors %}
+<div class="row">
+    {% for doctor in doctors %}
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ doctor }}</h5>
+                <p class="text-muted mb-1">{{ doctor.specialization|default:"General" }}</p>
+                <p class="small mb-2">{{ doctor.bio|default:"No bio available." }}</p>
+                {% with avails=doctor.availabilities.all %}
+                {% if avails %}
+                <p class="small mb-2">
+                    <strong>Available:</strong>
+                    {% for a in avails %}{{ a.get_day_of_week_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </p>
+                {% endif %}
+                {% endwith %}
+                <a href="{% url 'book_appointment' doctor.id %}" class="btn btn-primary btn-sm w-100">Book Appointment</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-user-md" style="font-size:3rem;color:#e2e8f0;margin-bottom:1rem;display:block;"></i>
+        <p class="text-muted mb-0">No doctors found matching your search.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

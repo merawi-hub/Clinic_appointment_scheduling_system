@@ -1,0 +1,145 @@
+{% extends 'base_admin.html' %}
+{% block title %}Manage Doctors{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Doctor Management</h4>
+    <div class="d-flex gap-2">
+        <a href="{% url 'admin_add_doctor' %}" class="btn btn-primary btn-sm">+ Add Doctor</a>
+        <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+    </div>
+</div>
+
+<div class="accordion" id="specializationAccordion">
+
+    {% for spec in specializations %}
+    {% if spec.doctors %}
+    <div class="accordion-item mb-2 border rounded shadow-sm">
+        <h2 class="accordion-header" id="heading-{{ spec.id }}">
+            <button class="accordion-button collapsed fw-semibold" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse-{{ spec.id }}"
+                    aria-expanded="false"
+                    aria-controls="collapse-{{ spec.id }}">
+                <i class="fas fa-stethoscope me-2 text-primary"></i>
+                {{ spec.name }}
+                <span class="badge bg-primary ms-2">{{ spec.doctors|length }}</span>
+            </button>
+        </h2>
+        <div id="collapse-{{ spec.id }}" class="accordion-collapse collapse"
+             aria-labelledby="heading-{{ spec.id }}"
+             data-bs-parent="#specializationAccordion">
+            <div class="accordion-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Name</th><th>Username</th><th>Phone</th><th>Available</th><th>Schedule</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in spec.doctors %}
+                            <tr>
+                                <td>{{ doc }}</td>
+                                <td>{{ doc.user.username }}</td>
+                                <td>{{ doc.user.phone|default:"—" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if doc.is_available %}success{% else %}secondary{% endif %}">
+                                        {% if doc.is_available %}Available{% else %}Unavailable{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if doc.schedule_count > 0 %}
+                                    <span class="badge bg-primary">{{ doc.schedule_count }} day(s)</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i>No Schedule</span>
+                                    {% endif %}
+                                </td>
+                                <td class="d-flex gap-1 flex-wrap">
+                                    <a href="{% url 'admin_edit_doctor' doc.id %}" class="btn btn-sm btn-warning">Edit</a>
+                                    <form method="post" action="{% url 'admin_toggle_doctor_availability' doc.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if doc.is_available %}btn-secondary{% else %}btn-success{% endif %}">
+                                            {% if doc.is_available %}Set Unavailable{% else %}Set Available{% endif %}
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'admin_delete_doctor' doc.id %}" class="btn btn-sm btn-danger"
+                                       data-confirm="Permanently delete Dr. {{ doc }}?"
+                                       data-confirm-title="Delete Doctor"
+                                       data-confirm-type="danger">Delete</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% empty %}
+    <p class="text-muted">No specializations found.</p>
+    {% endfor %}
+
+    {% if unassigned %}
+    <div class="accordion-item mb-2 border rounded shadow-sm">
+        <h2 class="accordion-header" id="heading-unassigned">
+            <button class="accordion-button collapsed fw-semibold" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse-unassigned"
+                    aria-expanded="false"
+                    aria-controls="collapse-unassigned">
+                <i class="fas fa-user-md me-2 text-secondary"></i>
+                Unassigned
+                <span class="badge bg-secondary ms-2">{{ unassigned|length }}</span>
+            </button>
+        </h2>
+        <div id="collapse-unassigned" class="accordion-collapse collapse"
+             aria-labelledby="heading-unassigned"
+             data-bs-parent="#specializationAccordion">
+            <div class="accordion-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Name</th><th>Username</th><th>Phone</th><th>Available</th><th>Schedule</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in unassigned %}
+                            <tr>
+                                <td>{{ doc }}</td>
+                                <td>{{ doc.user.username }}</td>
+                                <td>{{ doc.user.phone|default:"—" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if doc.is_available %}success{% else %}secondary{% endif %}">
+                                        {% if doc.is_available %}Available{% else %}Unavailable{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if doc.schedule_count > 0 %}
+                                    <span class="badge bg-primary">{{ doc.schedule_count }} day(s)</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i>No Schedule</span>
+                                    {% endif %}
+                                </td>
+                                <td class="d-flex gap-1 flex-wrap">
+                                    <a href="{% url 'admin_edit_doctor' doc.id %}" class="btn btn-sm btn-warning">Edit</a>
+                                    <form method="post" action="{% url 'admin_toggle_doctor_availability' doc.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if doc.is_available %}btn-secondary{% else %}btn-success{% endif %}">
+                                            {% if doc.is_available %}Set Unavailable{% else %}Set Available{% endif %}
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'admin_delete_doctor' doc.id %}" class="btn btn-sm btn-danger"
+                                       data-confirm="Permanently delete Dr. {{ doc }}?"
+                                       data-confirm-title="Delete Doctor"
+                                       data-confirm-type="danger">Delete</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

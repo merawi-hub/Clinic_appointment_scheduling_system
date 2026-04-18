@@ -1,0 +1,66 @@
+{% extends 'base_auth.html' %}
+{% block title %}Register — Addis Clinic{% endblock %}
+{% block content %}
+<h4 class="form-title" style="font-size:1.1rem;margin-bottom:0.1rem;">Create Account</h4>
+<p class="form-sub" style="margin-bottom:0.9rem;font-size:0.8rem;">Register as a patient to book appointments</p>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger" style="padding:0.5rem 0.75rem;font-size:0.8rem;margin-bottom:0.75rem;">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.role }}
+
+    <div class="row g-1 mb-1">
+        <div class="col-6">
+            <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">First Name</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-6">
+            <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Last Name</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+        </div>
+    </div>
+
+    <div class="mb-1">
+        <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.username.errors.0 }}</div>{% endif %}
+    </div>
+
+    <div class="mb-1">
+        <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.email.errors.0 }}</div>{% endif %}
+    </div>
+
+    <div class="mb-1">
+        <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Phone <span class="text-muted">(optional)</span></label>
+        {{ form.phone }}
+        {% if form.phone.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.phone.errors.0 }}</div>{% endif %}
+    </div>
+
+    <div class="row g-1 mb-1">
+        <div class="col-6">
+            <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Password</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.password1.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-6">
+            <label class="form-label" style="font-size:0.78rem;margin-bottom:2px;">Confirm Password</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}<div class="text-danger" style="font-size:0.72rem;">{{ form.password2.errors.0 }}</div>{% endif %}
+        </div>
+    </div>
+    <small class="text-muted d-block mb-2" style="font-size:0.72rem;">Min 8 chars · uppercase · lowercase · number · special char</small>
+
+    <button type="submit" class="btn-auth" style="padding:0.6rem;">Create Account</button>
+</form>
+
+<div class="auth-footer" style="margin-top:0.9rem;font-size:0.85rem;">
+    Already have an account? <a href="{% url 'login' %}">Sign in</a>
+</div>
+{% endblock %}

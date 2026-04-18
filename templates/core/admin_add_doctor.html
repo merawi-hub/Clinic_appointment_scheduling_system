@@ -1,0 +1,100 @@
+{% extends 'base_admin.html' %}
+{% block title %}Add Doctor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Add New Doctor</h4>
+    <a href="{% url 'admin_doctors' %}" class="btn-nav-back"><i class="fas fa-user-md"></i> Back to Doctors</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Doctor Information & Credentials</div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">First Name *</label>
+                    <input type="text" name="first_name" class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+                           value="{{ form_data.first_name|default:'' }}" required>
+                    {% if errors.first_name %}<div class="invalid-feedback">{{ errors.first_name }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Last Name *</label>
+                    <input type="text" name="last_name" class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+                           value="{{ form_data.last_name|default:'' }}" required>
+                    {% if errors.last_name %}<div class="invalid-feedback">{{ errors.last_name }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Username *</label>
+                    <input type="text" name="username" class="form-control {% if errors.username %}is-invalid{% endif %}"
+                           value="{{ form_data.username|default:'' }}" required>
+                    {% if errors.username %}<div class="invalid-feedback">{{ errors.username }}</div>{% endif %}
+                    <small class="text-muted">3–10 chars, must start with a letter</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Password *</label>
+                    <input type="password" name="password" class="form-control {% if errors.password %}is-invalid{% endif %}" required>
+                    {% if errors.password %}<div class="invalid-feedback">{{ errors.password }}</div>{% endif %}
+                    <small class="text-muted">Min 8 chars · uppercase · lowercase · number · special char</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email * <small class="text-muted">(credentials sent here)</small></label>
+                    <input type="email" name="email" class="form-control {% if errors.email %}is-invalid{% endif %}"
+                           value="{{ form_data.email|default:'' }}" required>
+                    {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input type="text" name="phone" class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                           value="{{ form_data.phone|default:'' }}">
+                    {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
+                </div>
+
+                <!-- Specialization -->
+                <div class="col-md-6">
+                    <label class="form-label">Specialization *</label>
+                    <select name="specialization" class="form-select" id="spec_select" onchange="toggleNewSpec(this)" required>
+                        <option value="">— Select —</option>
+                        {% for s in specializations %}
+                        <option value="{{ s.id }}" {% if form_data.specialization == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                        <option value="new" {% if form_data.specialization == 'new' %}selected{% endif %}>+ Create New</option>
+                    </select>
+                </div>
+                <div class="col-md-6" id="new_spec_field" style="display:none;">
+                    <label class="form-label">New Specialization Name *</label>
+                    <input type="text" name="new_specialization" id="new_spec_input"
+                           class="form-control {% if errors.new_specialization %}is-invalid{% endif %}"
+                           value="{{ form_data.new_specialization|default:'' }}">
+                    {% if errors.new_specialization %}<div class="invalid-feedback">{{ errors.new_specialization }}</div>{% endif %}
+                    <small class="text-muted">Letters only, 3–100 characters</small>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Bio</label>
+                    <textarea name="bio" class="form-control" rows="3">{{ form_data.bio|default:'' }}</textarea>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">Add Doctor & Send Credentials</button>
+                    <a href="{% url 'admin_doctors' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleNewSpec(sel) {
+    const field = document.getElementById('new_spec_field');
+    const input = document.getElementById('new_spec_input');
+    field.style.display = sel.value === 'new' ? 'block' : 'none';
+    input.required = sel.value === 'new';
+}
+// Restore state on validation error
+if ('{{ form_data.specialization }}' === 'new') {
+    document.getElementById('new_spec_field').style.display = 'block';
+    document.getElementById('new_spec_input').required = true;
+}
+</script>
+{% endblock %}
+

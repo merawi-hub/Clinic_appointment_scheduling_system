@@ -1,0 +1,106 @@
+{% extends 'base_admin.html' %}
+{% block title %}Remove Doctor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Remove Doctor — {{ doctor }}</h4>
+    <a href="{% url 'admin_doctors' %}" class="btn-nav-back"><i class="fas fa-user-md"></i> Back to Doctors</a>
+</div>
+
+{% if active_appointments %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>{{ active_appointments.count }} active appointment(s)</strong> will be affected by removing {{ doctor }}.
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Affected Appointments</div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for appt in active_appointments %}
+                <tr>
+                    <td>{{ appt.patient.get_full_name|default:appt.patient.username }}</td>
+                    <td>{{ appt.date }}</td>
+                    <td>{{ appt.start_time|time:"g:i A" }}</td>
+                    <td><span class="badge bg-warning text-dark">{{ appt.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if replacement_doctors %}
+<div class="card mb-4">
+    <div class="card-header" style="background:linear-gradient(135deg,#16a34a,#15803d);">
+        <i class="fas fa-user-md me-2"></i>Option 1: Assign Replacement Doctor ({{ spec_name }})
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Select a replacement doctor. All appointments will be transferred to them with the same date and time.</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="replace">
+            <div class="mb-3">
+                <label class="form-label">Select Replacement Doctor</label>
+                <select name="replacement_doctor" class="form-select" required>
+                    <option value="">— Choose a doctor —</option>
+                    {% for doc in replacement_doctors %}
+                    <option value="{{ doc.id }}">{{ doc }} — {{ doc.specialization }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success"
+                data-confirm="Transfer all appointments to the selected doctor and permanently remove {{ doctor }}?"
+                data-confirm-title="Transfer &amp; Remove Doctor"
+                data-confirm-type="warning">
+                <i class="fas fa-exchange-alt me-1"></i>Transfer & Remove Doctor
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+        <i class="fas fa-times-circle me-2"></i>Option {% if replacement_doctors %}2{% else %}1{% endif %}: Cancel Appointments & Remove
+    </div>
+    <div class="card-body">
+        {% if any_doctors_in_spec %}
+        <p class="text-muted mb-3">All appointments will be cancelled. Affected patients will be added to a waiting queue and notified when a replacement {{ spec_name }} doctor becomes available.</p>
+        {% else %}
+        <p class="text-muted mb-3">All appointments will be cancelled. Patients will be notified that no {{ spec_name }} doctors are currently available.</p>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-danger"
+                data-confirm="Cancel all appointments and remove {{ doctor }}? Affected patients will be notified."
+                data-confirm-title="Cancel Appointments &amp; Remove Doctor"
+                data-confirm-type="danger">
+                <i class="fas fa-trash me-1"></i>Cancel Appointments & Remove Doctor
+            </button>
+        </form>
+    </div>
+</div>
+
+{% else %}
+<!-- No active appointments — simple delete -->
+<div class="card mb-4">
+    <div class="card-body text-center py-3">
+        <p class="text-muted mb-0"><i class="fas fa-check-circle me-2" style="color:#16a34a;"></i>No active appointments. Safe to remove.</p>
+    </div>
+</div>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="cancel">
+    <button type="submit" class="btn btn-danger"
+        data-confirm="Permanently remove {{ doctor }}? This action cannot be undone."
+        data-confirm-title="Remove Doctor"
+        data-confirm-type="danger">
+        <i class="fas fa-trash me-1"></i>Remove Doctor
+    </button>
+    <a href="{% url 'admin_doctors' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endif %}
+{% endblock %}

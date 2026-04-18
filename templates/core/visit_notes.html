@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Visit Notes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Visit Notes</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card">
+    <div class="card-header">Appointment Details</div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Ref:</strong> <code style="color:#2563eb;">{{ appointment.appointment_ref }}</code></p>
+                <p class="mb-1"><strong>Patient:</strong> {{ appointment.patient.get_full_name|default:appointment.patient.username }}</p>
+                <p class="mb-1"><strong>Date:</strong> {{ appointment.date|date:"l, M d Y" }}</p>
+                <p class="mb-0"><strong>Time:</strong> {{ appointment.start_time|time:"g:i A" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Status:</strong>
+                    <span class="badge bg-{% if appointment.status == 'confirmed' %}success{% elif appointment.status == 'completed' %}primary{% else %}secondary{% endif %}">
+                        {{ appointment.status|capfirst }}
+                    </span>
+                </p>
+                {% if appointment.follow_up_of %}
+                <p class="mb-0"><strong>Follow-up of:</strong> <code style="color:#7c3aed;">{{ appointment.follow_up_of.appointment_ref }}</code></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="alert alert-info" style="font-size:0.88rem;">
+            <i class="fas fa-info-circle me-2"></i>
+            Add your clinical notes below. The appointment will be marked as <strong>completed by the admin/receptionist</strong> when the patient is checked out.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Visit Notes / Diagnosis <span class="text-muted">(optional)</span></label>
+                <textarea name="notes" class="form-control" rows="5"
+                          placeholder="Enter diagnosis, prescription, recommendations...">{{ appointment.notes }}</textarea>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Notes</button>
+                <a href="{% url 'doctor_followup' appointment.id %}" class="btn btn-outline-success">
+                    <i class="fas fa-calendar-plus me-1"></i>Schedule Follow-Up
+                </a>
+                <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

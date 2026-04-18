@@ -1,0 +1,55 @@
+{% extends 'base_admin.html' %}
+{% block title %}Profile Change Requests{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Profile Change Requests</h4>
+    <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0">
+            <thead>
+                <tr><th>User</th><th>Role</th><th>Requested Changes</th><th>Submitted</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td>{{ r.user.username }}</td>
+                    <td>{{ r.user.role|capfirst }}</td>
+                    <td>
+                        {% if r.request_type == 'password' %}
+                        <span class="badge bg-info">Password Change</span>
+                        {% else %}
+                        <small>
+                            <strong>Name:</strong> {{ r.first_name }} {{ r.last_name }}<br>
+                            <strong>Email:</strong> {{ r.email }}<br>
+                            <strong>Phone:</strong> {{ r.phone|default:"—" }}
+                        </small>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.created_at|date:"M d, H:i" }}</td>
+                    <td>
+                        <span class="badge bg-{% if r.status == 'approved' %}success{% elif r.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                            {{ r.status|capfirst }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if r.status == 'pending' %}
+                        <form method="post" action="{% url 'admin_handle_profile_request' r.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
+                            <button name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
+                        </form>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-muted text-center">No profile change requests.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
