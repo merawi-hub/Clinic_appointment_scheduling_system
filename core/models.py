@@ -27,6 +27,8 @@ class DoctorProfile(models.Model):
     specialization = models.ForeignKey(Specialization, on_delete=models.SET_NULL, null=True, blank=True)
     bio = models.TextField(blank=True)
     is_available = models.BooleanField(default=True)
+    photo = models.ImageField(upload_to='doctor_photos/', null=True, blank=True)
+    unavailable_since = models.DateTimeField(null=True, blank=True)  # tracks when set unavailable
 
     def __str__(self):
         return f"Dr. {self.user.get_full_name() or self.user.username}"

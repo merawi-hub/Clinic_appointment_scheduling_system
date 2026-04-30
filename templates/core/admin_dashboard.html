@@ -10,25 +10,51 @@
         </h4>
         <p class="text-muted mb-0" style="font-size:0.85rem;">Welcome back, {{ user.get_full_name|default:user.username }} · {{ "now"|date:"l, F d Y" }}</p>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="{% url 'admin_users' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-users"></i> Patients</a>
-        <a href="{% url 'admin_doctors' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-user-md"></i> Doctors</a>
-        <a href="{% url 'admin_appointments' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-calendar"></i> Appointments</a>
-        <a href="{% url 'admin_today_appointments' %}" class="btn btn-primary btn-sm"><i class="fas fa-calendar-day"></i> Today's Appointments</a>
-        <a href="{% url 'admin_specializations' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-stethoscope"></i> Specializations</a>
-        <div class="dropdown">
-            <button class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="fas fa-file-chart-line"></i> Generate Report
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><h6 class="dropdown-header">Select Period</h6></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=week"><i class="fas fa-calendar-week me-2"></i>Last 7 Days</a></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=month"><i class="fas fa-calendar me-2"></i>Last 30 Days</a></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=3months"><i class="fas fa-calendar-alt me-2"></i>Last 3 Months</a></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=6months"><i class="fas fa-calendar-alt me-2"></i>Last 6 Months</a></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=year"><i class="fas fa-star me-2"></i>Last 365 Days</a></li>
-                <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=custom"><i class="fas fa-sliders-h me-2"></i>Custom Range</a></li>
-            </ul>
+    <div class="d-flex gap-2 flex-wrap" id="dashHeaderBtns">
+        <!-- Desktop: show all buttons -->
+        <div class="d-none d-md-flex gap-2 flex-wrap">
+            <a href="{% url 'admin_users' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-users"></i> Patients</a>
+            <a href="{% url 'admin_doctors' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-user-md"></i> Doctors</a>
+            <a href="{% url 'admin_appointments' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-calendar"></i> Appointments</a>
+            <a href="{% url 'admin_today_appointments' %}" class="btn btn-primary btn-sm"><i class="fas fa-calendar-day"></i> Today's</a>
+            <a href="{% url 'admin_specializations' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-stethoscope"></i> Specializations</a>
+            <div class="dropdown">
+                <button class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-file-chart-line"></i> Report
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><h6 class="dropdown-header">Select Period</h6></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=week"><i class="fas fa-calendar-week me-2"></i>Last 7 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=month"><i class="fas fa-calendar me-2"></i>Last 30 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=3months"><i class="fas fa-calendar-alt me-2"></i>Last 3 Months</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=6months"><i class="fas fa-calendar-alt me-2"></i>Last 6 Months</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=year"><i class="fas fa-star me-2"></i>Last 365 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=custom"><i class="fas fa-sliders-h me-2"></i>Custom Range</a></li>
+                </ul>
+            </div>
+        </div>
+        <!-- Mobile: single dropdown -->
+        <div class="d-md-none">
+            <div class="dropdown">
+                <button class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-th-large me-1"></i> Menu
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" style="min-width:220px;">
+                    <li><a class="dropdown-item" href="{% url 'admin_users' %}"><i class="fas fa-users me-2 text-primary"></i>Patients</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin_doctors' %}"><i class="fas fa-user-md me-2 text-primary"></i>Doctors</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin_appointments' %}"><i class="fas fa-calendar me-2 text-secondary"></i>Appointments</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin_today_appointments' %}"><i class="fas fa-calendar-day me-2 text-primary"></i>Today's Appointments</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin_specializations' %}"><i class="fas fa-stethoscope me-2 text-secondary"></i>Specializations</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header"><i class="fas fa-file-chart-line me-1"></i>Generate Report</h6></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=week"><i class="fas fa-calendar-week me-2 text-success"></i>Last 7 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=month"><i class="fas fa-calendar me-2 text-success"></i>Last 30 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=3months"><i class="fas fa-calendar-alt me-2 text-success"></i>Last 3 Months</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=6months"><i class="fas fa-calendar-alt me-2 text-success"></i>Last 6 Months</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=year"><i class="fas fa-star me-2 text-success"></i>Last 365 Days</a></li>
+                    <li><a class="dropdown-item" href="{% url 'generate_report' %}?period=custom"><i class="fas fa-sliders-h me-2 text-success"></i>Custom Range</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -142,9 +168,14 @@
                 {% for doc in top_doctors %}
                 <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid #f1f5f9;">
                     <div class="d-flex align-items-center gap-2">
+                        {% if doc.photo %}
+                        <img src="{{ doc.photo.url }}" alt="{{ doc }}"
+                             style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #e2e8f0;">
+                        {% else %}
                         <div style="width:34px;height:34px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.75rem;font-weight:700;flex-shrink:0;">
                             {{ doc.user.first_name|first|upper }}{{ doc.user.last_name|first|upper }}
                         </div>
+                        {% endif %}
                         <div>
                             <div style="font-size:0.85rem;font-weight:600;color:#1e293b;">{{ doc }}</div>
                             <div style="font-size:0.72rem;color:#64748b;">{{ doc.specialization|default:"General" }}</div>
@@ -297,7 +328,7 @@ function initBarChart(labels, datasets) {
             responsive: true, animation: { duration: 600, easing: 'easeInOutQuart' },
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: true, position: 'top', labels: { color: '#374151', font: { size: 11 }, usePointStyle: true, padding: 12 } },
+                legend: { display: false },
                 tooltip: { backgroundColor: '#1e293b', titleColor: '#93c5fd', bodyColor: '#e2e8f0', cornerRadius: 8, callbacks: { footer: items => `Total: ${items.reduce((s,i)=>s+i.parsed.y,0)}` } }
             },
             scales: {

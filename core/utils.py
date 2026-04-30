@@ -1,11 +1,55 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from .models import DoctorAvailability, Appointment
+
+
+def cleanup_past_schedules(doctor_profile):
+    """
+    Auto-delete DoctorAvailability records where the most recent occurrence
+    of that day of week has passed AND there are no future booked appointments
+    on that day of week.
+    
+    This treats schedules as one-time (for the next occurrence of that day),
+    not recurring weekly.
+    """
+    today = date_type.today()
+    availabilities = list(DoctorAvailability.objects.filter(doctor=doctor_profile))
+    
+    for avail in availabilities:
+        dow = avail.day_of_week  # 0=Monday ... 6=Sunday
+        
+        # Find the most recent past occurrence of this day of week (not today)
+        days_since = (today.weekday() - dow) % 7
+        if days_since == 0:
+            # The schedule day is today — don't delete yet
+            continue
+        
+        most_recent_past = today - timedelta(days=days_since)
+        
+        # Check if there are any future appointments on this specific day of week
+        # by scanning the next 60 days for dates matching this day of week
+        future_bookings = False
+        check_date = today
+        for _ in range(60):
+            if check_date.weekday() == dow:
+                if Appointment.objects.filter(
+                    doctor=doctor_profile,
+                    date=check_date,
+                    status__in=['pending', 'confirmed', 'rescheduled']
+                ).exists():
+                    future_bookings = True
+                    break
+            check_date += timedelta(days=1)
+        
+        if not future_bookings:
+            # No future bookings on this day of week — delete the schedule
+            avail.delete()
 
 
 def get_available_slots(doctor_profile, date):
     """
     Returns a list of available time slot strings for a given doctor and date.
     Handles multiple availability windows per day. Filters out already booked slots.
+    For today: filters out past slots AND slots within the next 30 minutes (booking buffer).
     """
     day_of_week = date.weekday()
 
@@ -16,6 +60,12 @@ def get_available_slots(doctor_profile, date):
 
     if not availabilities.exists():
         return []
+
+    # For today, calculate the minimum bookable time (now + 30 min buffer)
+    is_today = (date == date_type.today())
+    min_time = None
+    if is_today:
+        min_time = (datetime.now() + timedelta(minutes=30)).time()
 
     slots = []
     for availability in availabilities:
@@ -29,7 +79,6 @@ def get_available_slots(doctor_profile, date):
         lunch_end = None
         if window_mins > 480:
             midpoint = current + timedelta(minutes=window_mins / 2)
-            # Round to nearest 30-min boundary
             mid_mins = midpoint.hour * 60 + midpoint.minute
             mid_mins = (mid_mins // 30) * 30
             lunch_start = current.replace(hour=0, minute=0, second=0) + timedelta(minutes=mid_mins)
@@ -40,6 +89,10 @@ def get_available_slots(doctor_profile, date):
             # Skip slots overlapping lunch break
             if lunch_start and lunch_end and current < lunch_end and slot_end > lunch_start:
                 current = lunch_end
+                continue
+            # For today: skip past slots and slots within 30-min buffer
+            if is_today and min_time and current.time() < min_time:
+                current += delta
                 continue
             slots.append(current.time())
             current += delta

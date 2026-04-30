@@ -1,14 +1,23 @@
 {% extends 'base.html' %}
 {% block title %}Appointment & Medical History{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>Appointment & Medical History</h4>
-    <div class="d-flex gap-2">
-        <a href="{% url 'patient_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+<style>
+.readmore-btn-med{
+    background:none;border:none;padding:0;
+    font-size:.78rem;font-weight:600;color:#2563eb;
+    cursor:pointer;text-decoration:underline;
+    text-underline-offset:2px;
+}
+.readmore-btn-med:hover{color:#1d4ed8;}
+</style>
+<div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 gap-2 flex-wrap">
+    <h4 class="mb-0" style="font-size:clamp(1rem,4vw,1.4rem);">Appointment & Medical History</h4>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <a href="{% url 'patient_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i><span class="d-none d-sm-inline"> Dashboard</span></a>
         {% if appointments %}
         <div class="dropdown">
             <button class="btn btn-danger btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                🗑 Clear History
+                🗑 <span class="d-none d-sm-inline">Clear History</span><span class="d-sm-none">Clear</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><h6 class="dropdown-header">Select period to preview & clear</h6></li>
@@ -25,9 +34,9 @@
     {% for appt in appointments %}
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span>{{ appt.date|date:"l, M d Y" }} — {{ appt.doctor }}</span>
+            <span style="color:#fff;font-weight:600;">{{ appt.date|date:"l, M d Y" }} — {{ appt.doctor }}</span>
             <div class="d-flex align-items-center gap-2">
-                <code style="font-size:0.78rem;color:#2563eb;background:#eff6ff;padding:2px 8px;border-radius:4px;">{{ appt.appointment_ref }}</code>
+                <code style="font-size:0.78rem;color:#bfdbfe;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:4px;">{{ appt.appointment_ref }}</code>
                 <span class="badge bg-{% if appt.status == 'completed' %}success{% elif appt.status == 'confirmed' %}primary{% elif appt.status == 'pending' %}warning{% elif appt.status == 'cancelled' %}secondary{% else %}danger{% endif %}">
                     {{ appt.status|capfirst }}
                 </span>
@@ -54,7 +63,13 @@
                 {% if appt.status == 'completed' and appt.notes %}
                 <div class="col-md-6">
                     <p class="mb-1"><strong>Visit Notes:</strong></p>
+                    {% if appt.notes|length > 100 %}
+                    <p class="text-muted mb-1" id="notes-short-{{ appt.id }}">{{ appt.notes|truncatechars:100 }}</p>
+                    <p class="text-muted mb-1" id="notes-full-{{ appt.id }}" style="display:none;">{{ appt.notes }}</p>
+                    <button class="readmore-btn-med" id="notes-btn-{{ appt.id }}" onclick="toggleNotes('{{ appt.id }}')">Read more</button>
+                    {% else %}
                     <p class="text-muted">{{ appt.notes }}</p>
+                    {% endif %}
                 </div>
                 {% elif appt.status == 'completed' %}
                 <div class="col-md-6">
@@ -68,5 +83,22 @@
 {% else %}
     <p class="text-muted">No appointment history yet.</p>
 {% endif %}
+
+<script>
+function toggleNotes(id) {
+    var s = document.getElementById('notes-short-' + id);
+    var f = document.getElementById('notes-full-'  + id);
+    var b = document.getElementById('notes-btn-'   + id);
+    if (f.style.display === 'none') {
+        s.style.display = 'none';
+        f.style.display = 'block';
+        b.textContent = 'Read less';
+    } else {
+        f.style.display = 'none';
+        s.style.display = 'block';
+        b.textContent = 'Read more';
+    }
+}
+</script>
 {% endblock %}
 

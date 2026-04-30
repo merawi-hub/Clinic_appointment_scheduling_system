@@ -157,3 +157,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'merawikelemework5@gmail.com'
 EMAIL_HOST_PASSWORD = 'amxqleptnvhmxsen'
 DEFAULT_FROM_EMAIL = 'Addis Clinic <merawikelemework5@gmail.com>'
+
+
+# Media files (uploaded doctor photos)
+import os
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

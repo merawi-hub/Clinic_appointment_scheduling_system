@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}Find a Doctor{% endblock %}
 {% block content %}
-<h4 class="mb-4">Find a Doctor</h4>
+<div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 gap-2 flex-wrap">
+    <h4 class="mb-0"><i class="fas fa-search me-2" style="color:#2563eb;"></i>Find a Doctor</h4>
+    <a href="{% url 'patient_dashboard' %}" class="btn-nav-back flex-shrink-0"><i class="fas fa-th-large"></i><span class="d-none d-sm-inline"> Dashboard</span></a>
+</div>
 
 <div class="card mb-4">
     <div class="card-body">
@@ -45,18 +48,32 @@
     <div class="col-md-4 mb-3">
         <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title">{{ doctor }}</h5>
-                <p class="text-muted mb-1">{{ doctor.specialization|default:"General" }}</p>
-                <p class="small mb-2">{{ doctor.bio|default:"No bio available." }}</p>
-                {% with avails=doctor.availabilities.all %}
-                {% if avails %}
-                <p class="small mb-2">
-                    <strong>Available:</strong>
-                    {% for a in avails %}{{ a.get_day_of_week_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </p>
-                {% endif %}
-                {% endwith %}
-                <a href="{% url 'book_appointment' doctor.id %}" class="btn btn-primary btn-sm w-100">Book Appointment</a>
+                <div class="d-flex align-items-start gap-3">
+                    <!-- Doctor photo -->
+                    {% if doctor.photo %}
+                    <img src="{{ doctor.photo.url }}" alt="{{ doctor }}"
+                         style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid #e2e8f0;">
+                    {% else %}
+                    <div style="width:64px;height:64px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0;border:3px solid #e2e8f0;">
+                        {{ doctor.user.first_name|first|upper }}{{ doctor.user.last_name|first|upper }}
+                    </div>
+                    {% endif %}
+                    <!-- Doctor info -->
+                    <div style="flex:1;min-width:0;">
+                        <h5 class="card-title mb-1" style="font-size:0.95rem;">{{ doctor }}</h5>
+                        <p class="text-muted mb-1" style="font-size:0.82rem;">{{ doctor.specialization|default:"General" }}</p>
+                        {% if doctor.bio %}<p class="small mb-2" style="color:#64748b;">{{ doctor.bio|truncatechars:60 }}</p>{% endif %}
+                        {% with avails=doctor.availabilities.all %}
+                        {% if avails %}
+                        <p class="small mb-2">
+                            <i class="fas fa-calendar-check me-1" style="color:#16a34a;"></i>
+                            {% for a in avails %}{{ a.get_day_of_week_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </p>
+                        {% endif %}
+                        {% endwith %}
+                        <a href="{% url 'book_appointment' doctor.id %}" class="btn btn-primary btn-sm w-100">Book Appointment</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

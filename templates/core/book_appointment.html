@@ -2,8 +2,11 @@
 {% block title %}Book Appointment{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>Book with {{ doctor }}</h4>
-    <a href="{% url 'search_doctors' %}" class="btn-nav-back"><i class="fas fa-search"></i> Back to Search</a>
+    <div>
+        <h4 class="mb-0" style="font-size:clamp(1rem,4vw,1.4rem);">Book Appointment</h4>
+        <div style="font-size:0.82rem;color:#64748b;margin-top:2px;">with {{ doctor }}</div>
+    </div>
+    <a href="{% url 'search_doctors' %}" class="btn-nav-back flex-shrink-0"><i class="fas fa-search"></i><span class="d-none d-sm-inline"> Back to Search</span></a>
 </div>
 
 {% if not availabilities %}

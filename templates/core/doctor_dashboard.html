@@ -1,33 +1,189 @@
 {% extends 'base.html' %}
 {% block title %}Doctor Dashboard — Addis Clinic{% endblock %}
 {% block content %}
+<style>
+/* ── Hero dropdown menu items ── */
+.hero-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #1e293b;
+    font-size: 0.855rem;
+    font-weight: 500;
+    transition: background 0.18s ease, color 0.18s ease;
+    white-space: nowrap;
+}
+.hero-menu-item:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    text-decoration: none;
+}
+.hero-menu-item .mi-icon {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+/* ── Pending requests — mobile card layout ── */
+@media (max-width: 767px) {
+    .pending-table thead { display: none; }
+    .pending-table tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        padding: 12px 14px;
+    }
+    .pending-table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0 !important;
+        border: none !important;
+        font-size: 0.85rem;
+    }
+    .pending-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #64748b;
+        font-size: 0.75rem;
+        min-width: 70px;
+    }
+    .pending-table .action-td {
+        display: block !important;
+        padding-top: 10px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        margin-top: 6px;
+    }
+    .pending-table .action-td::before { content: none; }
+    .pending-table .action-td .action-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+    .pending-table .action-td .action-row .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: 0.78rem;
+        padding: 6px 4px;
+    }
+}
+/* form inside flex row */
+.d-contents { display: contents; }
+</style>
 
 <!-- Doctor Hero -->
-<div style="background:linear-gradient(135deg,#0f4c75 0%,#1b6ca8 40%,#2c7a7b 100%),url('https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1200&q=60') center/cover no-repeat;background-blend-mode:multiply;border-radius:16px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
-    <div class="d-flex align-items-center gap-3" style="position:relative;z-index:1;">
-        <div style="width:70px;height:70px;background:linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.1));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:#fff;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);backdrop-filter:blur(4px);">
-            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+<div style="background:linear-gradient(135deg,#0f4c75 0%,#1b6ca8 40%,#2c7a7b 100%),url('https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1200&q=60') center/cover no-repeat;background-blend-mode:multiply;border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;position:relative;">
+    <!-- decorative circles clipped inside their own layer -->
+    <div style="position:absolute;inset:0;border-radius:16px;overflow:hidden;pointer-events:none;">
+        <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:rgba(255,255,255,0.05);border-radius:50%;"></div>
+    </div>
+    <div style="position:relative;z-index:1;">
+
+        <!-- Mobile layout (< md) -->
+        <div class="d-md-none" style="position:relative;z-index:1;">
+            <!-- Row 1: photo + menu button -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    {% if user.doctor_profile.photo %}
+                    <img src="{{ user.doctor_profile.photo.url }}" alt="Dr. {{ user.get_full_name }}"
+                         style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+                    {% else %}
+                    <div style="width:56px;height:56px;background:linear-gradient(135deg,rgba(255,255,255,0.35),rgba(255,255,255,0.15));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0;border:3px solid rgba(255,255,255,0.5);backdrop-filter:blur(4px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                    </div>
+                    {% endif %}
+                    <span style="color:rgba(255,255,255,0.7);font-size:0.75rem;font-weight:500;"><i class="fas fa-user-md me-1"></i>Doctor</span>
+                </div>
+                <!-- Mobile dropdown -->
+                <div class="dropdown">
+                    <button class="btn-card-action dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-bars me-1"></i>Menu
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width:210px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 8px 30px rgba(0,0,0,0.14);padding:6px;background:#fff;">
+                        <li><span style="display:block;padding:5px 10px 4px;font-size:0.67rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.09em;font-weight:700;">Actions</span></li>
+                        <li>
+                            <a class="hero-menu-item" href="{% url 'doctor_leave_request' %}">
+                                <span class="mi-icon" style="background:#fef9c3;"><i class="fas fa-calendar-minus" style="color:#d97706;"></i></span>
+                                Time Off
+                            </a>
+                        </li>
+                        <li>
+                            <a class="hero-menu-item" href="{% url 'doctor_reschedule_requests' %}">
+                                <span class="mi-icon" style="background:#eff6ff;"><i class="fas fa-calendar-edit" style="color:#2563eb;"></i></span>
+                                Reschedule Requests
+                                {% if reschedule_pending_count %}<span class="badge bg-danger ms-auto" style="font-size:0.62rem;">{{ reschedule_pending_count }}</span>{% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a class="hero-menu-item" href="{% url 'doctor_schedule' %}">
+                                <span class="mi-icon" style="background:#dcfce7;"><i class="fas fa-calendar-cog" style="color:#16a34a;"></i></span>
+                                Manage Schedule
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li><span style="display:block;padding:5px 10px 4px;font-size:0.67rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.09em;font-weight:700;">Navigate</span></li>
+                        <li>
+                            <a class="hero-menu-item" href="{% url 'doctor_today' %}">
+                                <span class="mi-icon" style="background:#dbeafe;"><i class="fas fa-calendar-day" style="color:#0891b2;"></i></span>
+                                Today's Schedule
+                            </a>
+                        </li>
+                        <li>
+                            <a class="hero-menu-item" href="{% url 'doctor_upcoming' %}">
+                                <span class="mi-icon" style="background:#dcfce7;"><i class="fas fa-calendar-check" style="color:#16a34a;"></i></span>
+                                Upcoming
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Row 2: full-width name -->
+            <div>
+                <div style="color:#fff;font-size:1.15rem;font-weight:800;text-shadow:0 2px 4px rgba(0,0,0,0.3);">Dr. {{ user.get_full_name|default:user.username }}</div>
+                {% if user.doctor_profile.specialization %}
+                <div style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-weight:500;margin-top:3px;"><i class="fas fa-stethoscope me-1"></i>{{ user.doctor_profile.specialization }}</div>
+                {% endif %}
+                <div style="color:rgba(255,255,255,0.6);font-size:0.72rem;margin-top:2px;"><i class="fas fa-calendar me-1"></i>{{ today|date:"D, d M Y" }}</div>
+            </div>
         </div>
-        <div>
-            <h4 style="color:#fff;margin:0;font-size:1.5rem;font-weight:800;">Dr. {{ user.get_full_name|default:user.username }}</h4>
-            {% if user.doctor_profile.specialization %}
-            <p style="color:rgba(255,255,255,0.8);margin:2px 0 0;font-size:0.9rem;"><i class="fas fa-stethoscope me-1"></i>{{ user.doctor_profile.specialization }}</p>
-            {% endif %}
-            <p style="color:rgba(255,255,255,0.6);margin:2px 0 0;font-size:0.8rem;"><i class="fas fa-calendar me-1"></i>{{ today|date:"l, F d Y" }}</p>
-        </div>
-        <div class="ms-auto d-flex gap-2">
-            <a href="{% url 'doctor_leave_request' %}" class="btn-card-action"><i class="fas fa-calendar-minus me-1"></i>Time Off</a>
-            {% if reschedule_pending_count %}
-            <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action" style="background:rgba(220,38,38,0.2);border-color:rgba(220,38,38,0.5);">
-                <i class="fas fa-calendar-edit me-1"></i>Reschedule Requests
-                <span class="badge bg-danger ms-1">{{ reschedule_pending_count }}</span>
-            </a>
+
+        <!-- Desktop layout (>= md) -->
+        <div class="d-none d-md-flex align-items-center gap-3">
+            {% if user.doctor_profile.photo %}
+            <img src="{{ user.doctor_profile.photo.url }}" alt="Dr. {{ user.get_full_name }}"
+                 style="width:80px;height:80px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.4);">
             {% else %}
-            <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action"><i class="fas fa-calendar-edit me-1"></i>Reschedule Requests</a>
+            <div style="width:80px;height:80px;background:linear-gradient(135deg,rgba(255,255,255,0.35),rgba(255,255,255,0.15));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;flex-shrink:0;border:3px solid rgba(255,255,255,0.5);backdrop-filter:blur(4px);box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+            </div>
             {% endif %}
-            <a href="{% url 'doctor_schedule' %}" class="btn-action"><i class="fas fa-calendar-cog me-1"></i>Manage Schedule</a>
+            <div style="flex:1;min-width:0;">
+                <h4 style="color:#fff;margin:0;font-size:1.4rem;font-weight:800;text-shadow:0 2px 4px rgba(0,0,0,0.3);">Dr. {{ user.get_full_name|default:user.username }}</h4>
+                {% if user.doctor_profile.specialization %}
+                <p style="color:rgba(255,255,255,0.85);margin:3px 0 0;font-size:0.85rem;font-weight:500;"><i class="fas fa-stethoscope me-1"></i>{{ user.doctor_profile.specialization }}</p>
+                {% endif %}
+                <p style="color:rgba(255,255,255,0.6);margin:2px 0 0;font-size:0.75rem;"><i class="fas fa-calendar me-1"></i>{{ today|date:"l, F d Y" }}</p>
+            </div>
+            <div class="d-flex gap-2 ms-auto">
+                <a href="{% url 'doctor_leave_request' %}" class="btn-card-action"><i class="fas fa-calendar-minus me-1"></i>Time Off</a>
+                {% if reschedule_pending_count %}
+                <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action" style="background:rgba(220,38,38,0.25);border-color:rgba(220,38,38,0.6);">
+                    <i class="fas fa-calendar-edit me-1"></i>Reschedule
+                    <span class="badge bg-danger ms-1">{{ reschedule_pending_count }}</span>
+                </a>
+                {% else %}
+                <a href="{% url 'doctor_reschedule_requests' %}" class="btn-card-action"><i class="fas fa-calendar-edit me-1"></i>Reschedule</a>
+                {% endif %}
+                <a href="{% url 'doctor_schedule' %}" class="btn-action"><i class="fas fa-calendar-cog me-1"></i>Manage Schedule</a>
+            </div>
         </div>
+
     </div>
 </div>
 
@@ -82,12 +238,12 @@
     </div>
     {% if pending %}
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 pending-table">
             <thead><tr><th>Patient</th><th>Date</th><th>Day</th><th>Time</th><th>Actions</th></tr></thead>
             <tbody>
                 {% for appt in pending %}
                 <tr>
-                    <td>
+                    <td data-label="Patient">
                         <div class="d-flex align-items-center gap-2">
                             <div style="width:32px;height:32px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#2563eb;flex-shrink:0;">
                                 {{ appt.patient.first_name|first|upper }}{{ appt.patient.last_name|first|upper }}
@@ -95,16 +251,18 @@
                             <span style="font-weight:600;">{{ appt.patient.get_full_name|default:appt.patient.username }}</span>
                         </div>
                     </td>
-                    <td>{{ appt.date|date:"M d, Y" }}</td>
-                    <td><span style="font-size:0.82rem;color:#64748b;">{{ appt.date|date:"l" }}</span></td>
-                    <td>{{ appt.start_time|time:"g:i A" }}</td>
-                    <td>
-                        <form method="post" action="{% url 'manage_appointment' appt.id %}" class="d-inline-flex gap-1">
-                            {% csrf_token %}
-                            <button name="action" value="confirm" class="btn btn-success btn-sm"><i class="fas fa-check me-1"></i>Accept</button>
-                            <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="fas fa-times me-1"></i>Reject</button>
-                        </form>
-                        <a href="{% url 'manage_appointment' appt.id %}" class="btn btn-warning btn-sm ms-1"><i class="fas fa-clock me-1"></i>Reschedule</a>
+                    <td data-label="Date">{{ appt.date|date:"M d, Y" }}</td>
+                    <td data-label="Day"><span style="font-size:0.82rem;color:#64748b;">{{ appt.date|date:"l" }}</span></td>
+                    <td data-label="Time">{{ appt.start_time|time:"g:i A" }}</td>
+                    <td class="action-td">
+                        <div class="action-row">
+                            <form method="post" action="{% url 'manage_appointment' appt.id %}" class="d-contents">
+                                {% csrf_token %}
+                                <button name="action" value="confirm" class="btn btn-success btn-sm"><i class="fas fa-check me-1"></i>Accept</button>
+                                <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="fas fa-times me-1"></i>Reject</button>
+                            </form>
+                            <a href="{% url 'manage_appointment' appt.id %}" class="btn btn-warning btn-sm"><i class="fas fa-clock me-1"></i>Reschedule</a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

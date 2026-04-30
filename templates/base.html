@@ -343,6 +343,23 @@
         }
         .page-header h4 { margin: 0; font-size: 1.4rem; }
 
+        /* ===== RESPONSIVE PAGE HEADERS — all d-flex justify-content-between mb-4 ===== */
+        /* Ensures no header ever overflows on mobile */
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"],
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"] {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-start;
+        }
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"] h4,
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"] h5 {
+            margin-bottom: 0;
+        }
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"] > a,
+        .content-wrapper > div[class*="d-flex"][class*="justify-content-between"] > div.d-flex {
+            flex-shrink: 0;
+        }
+
         /* ===== BACK BUTTON ===== */
         .btn-nav-back {
             display: inline-flex;
@@ -436,11 +453,48 @@
         .btn-card-action:active { transform: translateY(0); }
 
         /* ===== RESPONSIVE ===== */
+        /* Mobile nav panel — always hidden by default, shown only when .open */
+        .mobile-nav-panel {
+            display: none;
+            position: fixed; top: 64px; left: 0; right: 0;
+            background: #0f172a;
+            padding: 1rem;
+            z-index: 999;
+            flex-direction: column;
+            gap: 0.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .mobile-nav-panel.open { display: flex; }
+        .mobile-nav-panel a {
+            color: #cbd5e1; text-decoration: none;
+            padding: 0.6rem 1rem; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 500;
+            transition: background 0.2s;
+        }
+        .mobile-nav-panel a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
         @media (max-width: 768px) {
             .top-nav { padding: 0 1rem; }
-            .content-wrapper { padding: 1rem; }
+            .content-wrapper { padding: 0.75rem; }
             .nav-user { display: none; }
+            .nav-btn { display: none; }
+            .mobile-menu { display: flex !important; }
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .stat-card { margin-bottom: 0.5rem; }
         }
+        @media (min-width: 769px) {
+            .mobile-menu { display: none !important; }
+        }
+        .mobile-menu {
+            display: none;
+            align-items: center; justify-content: center;
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.15);
+            border: none; border-radius: 8px;
+            cursor: pointer; color: #fff; font-size: 1.1rem;
+            transition: background 0.2s;
+        }
+        .mobile-menu:hover { background: rgba(255,255,255,0.25); }
 
         /* Hide browser built-in password reveal icon */
         input[type="password"]::-ms-reveal,
@@ -468,8 +522,19 @@
             </span>
             <a href="{% url 'profile' %}" class="nav-btn"><i class="fas fa-cog"></i> Profile</a>
             <a href="{% url 'logout' %}" class="nav-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <!-- Mobile hamburger -->
+            <button class="mobile-menu" id="mobileMenuBtn" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </nav>
+    <!-- Mobile nav panel -->
+    <div class="mobile-nav-panel" id="mobileNavPanel">
+        <a href="{% url 'dashboard' %}"><i class="fas fa-th-large me-2"></i>Dashboard</a>
+        <a href="{% url 'notifications' %}"><i class="fas fa-bell me-2"></i>Notifications{% if unread_notifications %} <span class="badge bg-danger ms-1">{{ unread_notifications }}</span>{% endif %}</a>
+        <a href="{% url 'profile' %}"><i class="fas fa-cog me-2"></i>Profile</a>
+        <a href="{% url 'logout' %}" style="color:#fca5a5;"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
     {% endif %}
 
     <div class="content-wrapper">
@@ -566,6 +631,26 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script>
+// Mobile nav toggle
+document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('mobileMenuBtn');
+    var panel = document.getElementById('mobileNavPanel');
+    if (btn && panel) {
+        btn.addEventListener('click', function() {
+            panel.classList.toggle('open');
+            btn.querySelector('i').className = panel.classList.contains('open')
+                ? 'fas fa-times' : 'fas fa-bars';
+        });
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!btn.contains(e.target) && !panel.contains(e.target)) {
+                panel.classList.remove('open');
+                btn.querySelector('i').className = 'fas fa-bars';
+            }
+        });
+    }
+});
+
 // Auto password toggle — wraps every type="password" input with an eye icon
 document.addEventListener('DOMContentLoaded', function () {
     // Auto-dismiss all alerts after 10 seconds

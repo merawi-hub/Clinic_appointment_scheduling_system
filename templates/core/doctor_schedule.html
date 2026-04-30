@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}My Schedule{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4>My Schedule</h4>
-    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+<div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 gap-2 flex-wrap">
+    <h4 class="mb-0">My Schedule</h4>
+    <a href="{% url 'doctor_dashboard' %}" class="btn-nav-back flex-shrink-0"><i class="fas fa-th-large"></i><span class="d-none d-sm-inline"> Dashboard</span></a>
 </div>
 
 <div class="card mb-4">
-    <div class="card-header">Add Availability</div>
+    <div class="card-header"><i class="fas fa-plus me-2"></i>Add Availability</div>
     <div class="card-body">
         <form method="post" class="row g-2">
             {% csrf_token %}
             <input type="hidden" name="action" value="add">
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <select name="day_of_week" class="form-select" id="day_select" required>
                     <option value="">Select Day</option>
                     {% for val, label in day_choices %}
@@ -20,13 +20,13 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-2">
                 <select name="start_time" class="form-select" id="add_start" required></select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-2">
                 <select name="end_time" class="form-select" id="add_end" required></select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-2">
                 <select name="slot_duration" class="form-select" id="slot_duration">
                     <option value="15">15 min</option>
                     <option value="30" selected>30 min</option>
@@ -38,42 +38,57 @@
                     <option value="180">180 min (3 hrs)</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Add</button>
+            <div class="col-12 col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus me-1"></i>Add</button>
             </div>
         </form>
     </div>
 </div>
 
-<h5>Current Availability</h5>
-{% if availabilities %}
-<table class="table table-bordered">
-    <thead class="table-light">
-        <tr><th>Day</th><th>Start</th><th>End</th><th>Slot</th><th>Action</th></tr>
-    </thead>
-    <tbody>
-        {% for a in availabilities %}
-        <tr>
-            <td>{{ a.get_day_of_week_display }}</td>
-            <td>{{ a.start_time|time:"g:i A" }}</td>
-            <td>{{ a.end_time|time:"g:i A" }}</td>
-            <td>{{ a.slot_duration }} min</td>
-            <td>
-                <a href="{% url 'edit_availability' a.id %}" class="btn btn-warning btn-sm">Edit</a>
-                <form method="post" class="d-inline">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="avail_id" value="{{ a.id }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p class="text-muted">No availability set yet.</p>
-{% endif %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-calendar-alt me-2"></i>Current Availability</div>
+    {% if availabilities %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>Day</th><th>Start</th><th>End</th><th>Slot</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for a in availabilities %}
+                <tr>
+                    <td><span style="font-weight:600;">{{ a.get_day_of_week_display }}</span></td>
+                    <td>{{ a.start_time|time:"g:i A" }}</td>
+                    <td>{{ a.end_time|time:"g:i A" }}</td>
+                    <td><span class="badge" style="background:#eff6ff;color:#2563eb;">{{ a.slot_duration }} min</span></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'edit_availability' a.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit me-1"></i>Edit</a>
+                            <form method="post" class="d-contents">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="avail_id" value="{{ a.id }}">
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                    data-confirm="Remove {{ a.get_day_of_week_display }} schedule ({{ a.start_time|time:'g:i A' }} – {{ a.end_time|time:'g:i A' }})?"
+                                    data-confirm-title="Remove Schedule"
+                                    data-confirm-type="danger">
+                                    <i class="fas fa-trash me-1"></i>Remove
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-4">
+        <i class="fas fa-calendar-times" style="font-size:2.5rem;color:#e2e8f0;margin-bottom:0.75rem;display:block;"></i>
+        <p class="text-muted mb-0">No availability set yet. Add your first schedule above.</p>
+    </div>
+    {% endif %}
+</div>
+<style>.d-contents{display:contents;}</style>
 
 <script>
 function formatAMPM(h, m) {

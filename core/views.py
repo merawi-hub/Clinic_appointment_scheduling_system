@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import RegisterForm, DoctorForm
 from .models import DoctorProfile, Specialization, Appointment, RescheduleRequest, EmergencyCase
-from .utils import get_available_slots, notify, send_email_notification
+from .utils import get_available_slots, notify, send_email_notification, cleanup_past_schedules
 
 
 def role_required(*roles):
@@ -149,8 +149,13 @@ def login_view(request):
 
 
 def logout_view(request):
-    logout(request)
-    return redirect('landing')
+    if request.method == 'POST':
+        logout(request)
+        return redirect('landing')
+    # GET — show confirmation page (use admin layout for admin users)
+    if request.user.is_authenticated and (request.user.is_superuser or request.user.role == 'admin'):
+        return render(request, 'core/logout_confirm_admin.html')
+    return render(request, 'core/logout_confirm.html')
 
 
 @login_required
@@ -198,7 +203,10 @@ def search_doctors(request):
     query = request.GET.get('q', '')
     specialty_id = request.GET.get('specialty', '')
     day_filter = request.GET.get('day', '')
-    specializations = Specialization.objects.all()
+    # Only show specializations that have at least one available doctor
+    specializations = Specialization.objects.filter(
+        doctorprofile__is_available=True
+    ).distinct().order_by('name')
 
     # Only search when the user has actually submitted the form
     searched = any([query, specialty_id, day_filter])
@@ -223,7 +231,6 @@ def search_doctors(request):
                 day_of_week=day_filter
             ).values_list('doctor_id', flat=True)
             doctors = doctors.filter(id__in=available_doctor_ids)
-
     day_choices = [(str(i), d) for i, d in enumerate(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])]
 
     return render(request, 'core/search_doctors.html', {
@@ -242,6 +249,9 @@ def book_appointment(request, doctor_id):
     from .models import DoctorAvailability, LeaveRequest
     import json
     doctor = get_object_or_404(DoctorProfile, id=doctor_id)
+
+    # Auto-clean past schedules that were not recurring
+    cleanup_past_schedules(doctor)
 
     # Build next 14 days grouped by available day
     availabilities = DoctorAvailability.objects.filter(doctor=doctor).order_by('day_of_week')
@@ -275,10 +285,10 @@ def book_appointment(request, doctor_id):
                 d = today_date.today() + timedelta(days=i)
                 if d.weekday() == dow and d not in leave_dates:
                     if i == 0:
-                        # Today — only include if future slots remain
+                        # Today — only include if slots remain after 30-min buffer
                         future_slots = get_available_slots(doctor, d)
-                        now_plus_10 = (datetime.now() + timedelta(minutes=10)).time()
-                        future_slots = [s for s in future_slots if s >= now_plus_10]
+                        now_plus_30 = (datetime.now() + timedelta(minutes=30)).time()
+                        future_slots = [s for s in future_slots if s >= now_plus_30]
                         if future_slots:
                             upcoming_dates.append(d)
                     else:
@@ -301,10 +311,10 @@ def book_appointment(request, doctor_id):
                 slots = []
             elif parsed_date >= today_date.today() and parsed_date.weekday() in available_day_nums:
                 slots = get_available_slots(doctor, parsed_date)
-                # For today, filter out slots that are less than 10 minutes from now
+                # For today, filter out slots within 30 minutes from now (travel/prep buffer)
                 if parsed_date == today_date.today():
-                    now_plus_10 = (datetime.now() + timedelta(minutes=10)).time()
-                    slots = [s for s in slots if s >= now_plus_10]
+                    now_plus_30 = (datetime.now() + timedelta(minutes=30)).time()
+                    slots = [s for s in slots if s >= now_plus_30]
         except ValueError:
             parsed_date = None
 
@@ -846,6 +856,10 @@ def manage_appointment(request, appointment_id):
 def doctor_schedule(request):
     from .models import DoctorAvailability
     doctor = get_object_or_404(DoctorProfile, user=request.user)
+
+    # Auto-clean past one-time schedules
+    cleanup_past_schedules(doctor)
+
     availabilities = DoctorAvailability.objects.filter(doctor=doctor).order_by('day_of_week')
 
     if request.method == 'POST':
@@ -982,12 +996,29 @@ def edit_availability(request, avail_id):
 @login_required
 def notifications_view(request):
     from .models import Notification
+    from .models import User as UserModel
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
     unread_count = notifications.filter(is_read=False).count()
     notifications.filter(is_read=False).update(is_read=True)
+    # For admin: check if there are still pending user approvals
+    pending_users_exist = False
+    if request.user.is_superuser or request.user.role == 'admin':
+        pending_users_exist = UserModel.objects.filter(is_active=False).exclude(role='admin').exists()
+    # For doctor: check if there are still pending appointment requests
+    has_pending_appointments = False
+    if request.user.role == 'doctor':
+        try:
+            dp = request.user.doctor_profile
+            has_pending_appointments = Appointment.objects.filter(
+                doctor=dp, status='pending'
+            ).exists()
+        except Exception:
+            pass
     return render(request, 'core/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count,
+        'pending_users_exist': pending_users_exist,
+        'has_pending_appointments': has_pending_appointments,
     })
 
 
@@ -995,6 +1026,13 @@ def notifications_view(request):
 def clear_notification(request, notif_id):
     from .models import Notification
     Notification.objects.filter(id=notif_id, user=request.user).delete()
+    return redirect('notifications')
+
+
+@login_required
+def mark_notification_read(request, notif_id):
+    from .models import Notification
+    Notification.objects.filter(id=notif_id, user=request.user).update(is_read=True)
     return redirect('notifications')
 
 
@@ -2505,14 +2543,282 @@ def admin_doctors(request):
 
 @role_required('admin')
 def admin_toggle_doctor_availability(request, doctor_id):
-    """Admin toggles a doctor's is_available flag."""
+    """
+    Full availability toggle with smart scheduling logic.
+    SET UNAVAILABLE:
+      - Rule 1: Block if any appointment is ≤ 1 hour away
+      - Rule 2: If all appointments > 1 hour away, replace patients with same-spec doctor or cancel
+    SET AVAILABLE (was unavailable < 1 hour):
+      - Rule 3.1: Shift remaining appointments forward by downtime duration
+      - Rule 4.1: slot=30min, downtime≤30min → delete 1 slot
+      - Rule 4.2: slot=30min, 30<downtime≤60 → delete 2 slots; slot=60min → delete 1 slot
+      - Rule 4.3: slot>60min → keep as-is
+    """
+    from .models import DoctorAvailability
+    from django.utils import timezone as tz
+
     doctor = get_object_or_404(DoctorProfile, id=doctor_id)
-    if request.method == 'POST':
-        doctor.is_available = not doctor.is_available
-        doctor.save(update_fields=['is_available'])
-        status = 'available' if doctor.is_available else 'unavailable'
-        notify(doctor.user, f'Your availability status has been set to {status.upper()} by the admin.')
-        messages.success(request, f'{doctor} marked as {status}.')
+    if request.method != 'POST':
+        return redirect('admin_doctors')
+
+    # Always use timezone.now() for DB storage; use naive for time comparisons
+    now_aware = tz.now()
+    now_dt = datetime.now()  # naive, for comparing with appointment times
+    today = today_date.today()
+
+    if doctor.is_available:
+        # ── Setting UNAVAILABLE ──
+        # Get ALL future appointments (today and beyond)
+        upcoming = Appointment.objects.filter(
+            doctor=doctor,
+            date__gte=today,
+            status__in=['pending', 'confirmed'],
+        ).select_related('patient').order_by('date', 'start_time')
+
+        # Rule 1: block if any appointment TODAY is ≤ 1 hour away
+        for appt in upcoming.filter(date=today):
+            appt_dt = datetime.combine(appt.date, appt.start_time)
+            mins_until = (appt_dt - now_dt).total_seconds() / 60
+            if mins_until <= 60:
+                messages.error(request,
+                    f'Cannot set {doctor} unavailable — appointment with '
+                    f'{appt.patient.get_full_name() or appt.patient.username} '
+                    f'is in {int(mins_until)} minutes ({appt.start_time.strftime("%I:%M %p")}). '
+                    f'Wait until it is completed.')
+                return redirect('admin_doctors')
+
+        # Notify ALL affected patients immediately that their doctor is unavailable
+        for appt in upcoming:
+            notify(appt.patient,
+                f'⚠️ Notice: {doctor} has been set unavailable. '
+                f'Your appointment [{appt.appointment_ref}] on {appt.date} at '
+                f'{appt.start_time.strftime("%I:%M %p")} is being reviewed. '
+                f'You will receive another notification shortly with the outcome.')
+            if appt.patient.email:
+                send_email_notification(
+                    appt.patient.email,
+                    'Important Notice — Doctor Unavailability',
+                    f'Dear {appt.patient.get_full_name() or appt.patient.username},\n\n'
+                    f'We would like to inform you that {doctor} has been temporarily set '
+                    f'as unavailable.\n\n'
+                    f'Your appointment [{appt.appointment_ref}] on '
+                    f'{appt.date.strftime("%A, %B %d %Y")} at '
+                    f'{appt.start_time.strftime("%I:%M %p")} is being reviewed.\n\n'
+                    f'You will receive a follow-up notification shortly.\n\nAddis Clinic'
+                )
+
+        # Rule 2: replace or cancel appointments > 1 hour away
+        same_spec_doctors = DoctorProfile.objects.filter(
+            specialization=doctor.specialization,
+            is_available=True
+        ).exclude(id=doctor.id) if doctor.specialization else DoctorProfile.objects.none()
+
+        for appt in upcoming:
+            replaced = False
+            for rep in same_spec_doctors:
+                # Check rep is free at that time
+                conflict = Appointment.objects.filter(
+                    doctor=rep, date=appt.date, start_time=appt.start_time,
+                    status__in=['pending', 'confirmed']
+                ).exists()
+                if conflict:
+                    continue
+                # Check rep has schedule that day
+                avail = DoctorAvailability.objects.filter(
+                    doctor=rep, day_of_week=appt.date.weekday()
+                ).first()
+                if not avail or not (avail.start_time <= appt.start_time < avail.end_time):
+                    continue
+                # Reassign
+                old_doc = appt.doctor
+                appt.doctor = rep
+                appt.status = 'pending'
+                appt.save()
+                notify(appt.patient,
+                    f'Dear {appt.patient.get_full_name() or appt.patient.username}, '
+                    f'your appointment [{appt.appointment_ref}] on {appt.date} at '
+                    f'{appt.start_time.strftime("%I:%M %p")} has been reassigned from '
+                    f'{old_doc} to {rep} due to a scheduling change. '
+                    f'We apologize for any inconvenience.')
+                if appt.patient.email:
+                    send_email_notification(
+                        appt.patient.email,
+                        'Appointment Reassigned — Addis Clinic',
+                        f'Dear {appt.patient.get_full_name() or appt.patient.username},\n\n'
+                        f'We would like to inform you that your appointment has been reassigned '
+                        f'to a different doctor due to a scheduling change.\n\n'
+                        f'Ref        : {appt.appointment_ref}\n'
+                        f'New Doctor : {rep}\n'
+                        f'Date       : {appt.date.strftime("%A, %B %d %Y")}\n'
+                        f'Time       : {appt.start_time.strftime("%I:%M %p")}\n\n'
+                        f'We sincerely apologize for any inconvenience caused.\n\nAddis Clinic'
+                    )
+                notify(rep.user,
+                    f'Appointment [{appt.appointment_ref}] with '
+                    f'{appt.patient.get_full_name() or appt.patient.username} '
+                    f'on {appt.date} at {appt.start_time.strftime("%I:%M %p")} '
+                    f'has been transferred to you from {old_doc}.')
+                replaced = True
+                break
+
+            if not replaced:
+                appt.status = 'cancelled'
+                appt.save()
+                notify(appt.patient,
+                    f'Dear {appt.patient.get_full_name() or appt.patient.username}, '
+                    f'we regret to inform you that your appointment [{appt.appointment_ref}] '
+                    f'on {appt.date} at {appt.start_time.strftime("%I:%M %p")} has been '
+                    f'cancelled as no replacement doctor is currently available. '
+                    f'Please book a new appointment at your convenience. We apologize.')
+                if appt.patient.email:
+                    send_email_notification(
+                        appt.patient.email,
+                        'Appointment Cancelled — Addis Clinic',
+                        f'Dear {appt.patient.get_full_name() or appt.patient.username},\n\n'
+                        f'We regret to inform you that your appointment has been cancelled '
+                        f'as no replacement doctor is currently available.\n\n'
+                        f'Ref  : {appt.appointment_ref}\n'
+                        f'Date : {appt.date.strftime("%A, %B %d %Y")}\n'
+                        f'Time : {appt.start_time.strftime("%I:%M %p")}\n\n'
+                        f'Please log in to book a new appointment at your convenience.\n'
+                        f'We sincerely apologize for the inconvenience.\n\nAddis Clinic'
+                    )
+
+        # Record when unavailability started — store as naive to avoid tz mismatch
+        doctor.is_available = False
+        doctor.unavailable_since = now_dt  # naive datetime
+        doctor.save(update_fields=['is_available', 'unavailable_since'])
+        notify(doctor.user, 'Your availability has been set to UNAVAILABLE by the admin.')
+        messages.warning(request, f'{doctor} set unavailable. Affected appointments handled.')
+
+    else:
+        # ── Setting AVAILABLE ──
+        unavailable_since = doctor.unavailable_since
+        downtime_mins = 0
+        if unavailable_since:
+            # Always convert to naive for safe arithmetic
+            if hasattr(unavailable_since, 'tzinfo') and unavailable_since.tzinfo is not None:
+                unavailable_since_naive = unavailable_since.replace(tzinfo=None)
+            else:
+                unavailable_since_naive = unavailable_since
+            downtime_mins = (now_dt - unavailable_since_naive).total_seconds() / 60
+
+        doctor.is_available = True
+        doctor.unavailable_since = None
+        doctor.save(update_fields=['is_available', 'unavailable_since'])
+
+        if unavailable_since and downtime_mins <= 60:
+            # Was unavailable < 1 hour — apply shift + slot deletion logic
+            remaining = Appointment.objects.filter(
+                doctor=doctor,
+                date=today,
+                status__in=['confirmed', 'pending', 'delayed'],
+                start_time__gte=now_dt.time()
+            ).order_by('start_time')
+
+            # Rule 3.1: shift all remaining appointments forward by downtime
+            shift_mins = int(downtime_mins)
+            for appt in remaining:
+                old_start = appt.start_time
+                old_end = appt.end_time
+                new_start_dt = datetime.combine(today, old_start) + timedelta(minutes=shift_mins)
+                new_end_dt   = datetime.combine(today, old_end)   + timedelta(minutes=shift_mins)
+                appt.start_time = new_start_dt.time()
+                appt.end_time   = new_end_dt.time()
+                appt.status = 'confirmed'
+                appt.save(update_fields=['start_time', 'end_time', 'status', 'updated_at'])
+                notify(appt.patient,
+                    f'Dear {appt.patient.get_full_name() or appt.patient.username}, '
+                    f'your appointment [{appt.appointment_ref}] with {doctor} has been '
+                    f'shifted by {shift_mins} minutes due to a brief unavailability. '
+                    f'New time: {appt.start_time.strftime("%I:%M %p")}. '
+                    f'We apologize for the inconvenience.')
+                if appt.patient.email:
+                    send_email_notification(
+                        appt.patient.email,
+                        'Appointment Time Updated — Addis Clinic',
+                        f'Dear {appt.patient.get_full_name() or appt.patient.username},\n\n'
+                        f'Your appointment has been shifted forward by {shift_mins} minutes '
+                        f'due to a brief unavailability of your doctor.\n\n'
+                        f'Ref      : {appt.appointment_ref}\n'
+                        f'Doctor   : {doctor}\n'
+                        f'New Time : {appt.start_time.strftime("%I:%M %p")}\n\n'
+                        f'We sincerely apologize for the inconvenience.\n\nAddis Clinic'
+                    )
+
+            # Rules 4.1 / 4.2 / 4.3: slot deletion based on downtime and slot duration
+            avail = DoctorAvailability.objects.filter(
+                doctor=doctor, day_of_week=today.weekday()
+            ).order_by('start_time').first()
+
+            if avail:
+                slot = avail.slot_duration
+                slots_to_delete = 0
+
+                if slot <= 30:
+                    if downtime_mins <= 30:
+                        slots_to_delete = 1   # Rule 4.1
+                    elif downtime_mins <= 60:
+                        slots_to_delete = 2   # Rule 4.2 (30-min slot)
+                elif slot == 60:
+                    if downtime_mins <= 60:
+                        slots_to_delete = 1   # Rule 4.2 (60-min slot)
+                # Rule 4.3: slot > 60 → slots_to_delete stays 0
+
+                # Delete the next N booked slots (cancel those appointments)
+                if slots_to_delete > 0:
+                    slots_cancelled = Appointment.objects.filter(
+                        doctor=doctor,
+                        date=today,
+                        status__in=['confirmed', 'pending'],
+                        start_time__gte=now_dt.time()
+                    ).order_by('start_time')[:slots_to_delete]
+
+                    for appt in slots_cancelled:
+                        appt.status = 'cancelled'
+                        appt.save(update_fields=['status', 'updated_at'])
+                        notify(appt.patient,
+                            f'Dear {appt.patient.get_full_name() or appt.patient.username}, '
+                            f'your appointment [{appt.appointment_ref}] with {doctor} at '
+                            f'{appt.start_time.strftime("%I:%M %p")} has been cancelled '
+                            f'as it falls within the missed time slot due to the doctor\'s '
+                            f'brief unavailability. We sincerely apologize.')
+                        if appt.patient.email:
+                            send_email_notification(
+                                appt.patient.email,
+                                'Appointment Cancelled — Missed Slot',
+                                f'Dear {appt.patient.get_full_name() or appt.patient.username},\n\n'
+                                f'We regret to inform you that your appointment has been cancelled '
+                                f'as it falls within a missed time slot due to a brief unavailability.\n\n'
+                                f'Ref  : {appt.appointment_ref}\n'
+                                f'Time : {appt.start_time.strftime("%I:%M %p")}\n\n'
+                                f'Please book a new appointment at your convenience.\n'
+                                f'We sincerely apologize for the inconvenience.\n\nAddis Clinic'
+                            )
+
+            notify(doctor.user,
+                f'Your availability has been restored. '
+                f'Schedule shifted by {shift_mins} minutes. '
+                f'Affected patients have been notified.')
+            messages.success(request,
+                f'{doctor} set available. Schedule shifted by {shift_mins} min. '
+                f'Patients notified.')
+        else:
+            # Was unavailable > 1 hour or no record — simple restore
+            # Notify patients with upcoming appointments
+            future_appts = Appointment.objects.filter(
+                doctor=doctor,
+                date__gte=today,
+                status__in=['confirmed', 'pending']
+            ).select_related('patient')
+            for appt in future_appts:
+                notify(appt.patient,
+                    f'Good news! {doctor} is now available again. '
+                    f'Your appointment [{appt.appointment_ref}] on {appt.date} at '
+                    f'{appt.start_time.strftime("%I:%M %p")} remains confirmed.')
+            notify(doctor.user, 'Your availability has been restored by the admin.')
+            messages.success(request, f'{doctor} set available.')
+
     return redirect('admin_doctors')
 
 
@@ -2585,7 +2891,10 @@ def admin_add_doctor(request):
                 spec, _ = Specialization.objects.get_or_create(name=new_spec)
             else:
                 spec = Specialization.objects.filter(id=spec_id).first()
-            DoctorProfile.objects.create(user=user, specialization=spec, bio=bio)
+            DoctorProfile.objects.create(
+                user=user, specialization=spec, bio=bio,
+                photo=request.FILES.get('photo') or None
+            )
             try:
                 send_email_notification(
                     email,
@@ -2959,6 +3268,13 @@ def profile_view(request):
             user.email      = email
             user.phone      = phone
             user.save()
+            # Save doctor photo if uploaded
+            if user.role == 'doctor' and request.FILES.get('photo'):
+                try:
+                    user.doctor_profile.photo = request.FILES['photo']
+                    user.doctor_profile.save(update_fields=['photo'])
+                except Exception:
+                    pass
             messages.success(request, 'Profile updated successfully.')
             return redirect('profile')
 
@@ -3379,6 +3695,52 @@ def generate_report(request):
     return render(request, 'core/report.html', context)
 
 
+@role_required('admin')
+def export_report_csv(request):
+    """Export report data as CSV."""
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta, datetime as dt
+
+    period = request.GET.get('period', 'month')
+    now = today_date.today()
+    if period == 'week':
+        start_date = now - timedelta(days=7)
+    elif period == '3months':
+        start_date = now - timedelta(days=90)
+    elif period == '6months':
+        start_date = now - timedelta(days=180)
+    elif period == 'year':
+        start_date = now - timedelta(days=365)
+    else:
+        start_date = now - timedelta(days=30)
+    end_date = now
+
+    appointments = Appointment.objects.filter(
+        date__gte=start_date, date__lte=end_date
+    ).select_related('patient', 'doctor__user').order_by('-date')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="addis_clinic_report_{period}_{now}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Ref', 'Patient', 'Doctor', 'Specialization', 'Date', 'Time', 'Status', 'Notes'])
+    for appt in appointments:
+        writer.writerow([
+            appt.appointment_ref,
+            appt.patient.get_full_name() or appt.patient.username,
+            str(appt.doctor) if appt.doctor else '—',
+            str(appt.doctor.specialization) if appt.doctor and appt.doctor.specialization else '—',
+            appt.date,
+            appt.start_time.strftime('%H:%M'),
+            appt.status,
+            appt.notes or '',
+        ])
+    return response
+
+
+
+
 # ---------- Auto-expire past appointments ----------
 
 def auto_expire_appointments():
@@ -3483,3 +3845,173 @@ def admin_assign_replacement(request, queue_id):
         'item': item,
         'available_doctors': available_doctors,
     })
+
+
+@role_required('admin')
+def export_report_csv(request):
+    """Export report data as CSV."""
+    import csv
+    from django.http import HttpResponse
+    period = request.GET.get('period', 'month')
+    now = today_date.today()
+    period_days = {'week': 7, '3months': 90, '6months': 180, 'year': 365}
+    days = period_days.get(period, 30)
+    start_date = now - timedelta(days=days)
+
+    appointments = Appointment.objects.filter(
+        date__gte=start_date, date__lte=now
+    ).select_related('patient', 'doctor__user', 'doctor__specialization').order_by('-date')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="addis_clinic_report_{period}_{now}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Ref', 'Patient', 'Doctor', 'Specialization', 'Date', 'Time', 'Status', 'Notes'])
+    for appt in appointments:
+        writer.writerow([
+            appt.appointment_ref,
+            appt.patient.get_full_name() or appt.patient.username,
+            str(appt.doctor) if appt.doctor else '—',
+            str(appt.doctor.specialization) if appt.doctor and appt.doctor.specialization else '—',
+            str(appt.date),
+            appt.start_time.strftime('%H:%M'),
+            appt.status,
+            appt.notes or '',
+        ])
+    return response
+
+
+@role_required('admin')
+def export_report_excel(request):
+    """Export report data as Excel (.xlsx)."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        from django.http import HttpResponse
+        return HttpResponse('openpyxl not installed. Run: pip install openpyxl', status=500)
+
+    from django.http import HttpResponse
+    period = request.GET.get('period', 'month')
+    now = today_date.today()
+    period_days = {'week': 7, '3months': 90, '6months': 180, 'year': 365}
+    days = period_days.get(period, 30)
+    start_date = now - timedelta(days=days)
+
+    appointments = Appointment.objects.filter(
+        date__gte=start_date, date__lte=now
+    ).select_related('patient', 'doctor__user', 'doctor__specialization').order_by('-date')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Appointments'
+
+    # ── Report header rows ──
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    title_font   = Font(bold=True, size=14, color='1E3A5F')
+    label_font   = Font(bold=True, size=10, color='374151')
+    value_font   = Font(size=10, color='1A1A1A')
+    header_fill  = PatternFill(start_color='1E3A5F', end_color='1E3A5F', fill_type='solid')
+    header_font  = Font(color='FFFFFF', bold=True, size=11)
+    meta_fill    = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+
+    # Row 1: Clinic name
+    ws.merge_cells('A1:H1')
+    ws['A1'] = 'Addis Clinic — Appointment Management System'
+    ws['A1'].font = title_font
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 24
+
+    # Row 2: Report period label
+    period_labels = {'week': 'Last 7 Days', 'month': 'Last 30 Days',
+                     '3months': 'Last 3 Months', '6months': 'Last 6 Months', 'year': 'Last 365 Days'}
+    period_label = period_labels.get(period, f'Custom Range')
+    ws.merge_cells('A2:H2')
+    ws['A2'] = f'Report Period: {period_label}  |  Date Range: {start_date.strftime("%b %d, %Y")} — {now.strftime("%b %d, %Y")}'
+    ws['A2'].font = Font(bold=True, size=11, color='2563EB')
+    ws['A2'].alignment = Alignment(horizontal='center', vertical='center')
+    ws['A2'].fill = meta_fill
+    ws.row_dimensions[2].height = 20
+
+    # Row 3: Generated by / date
+    ws.merge_cells('A3:H3')
+    ws['A3'] = f'Generated on: {now.strftime("%B %d, %Y")}  |  Total Records: {appointments.count()} appointments'
+    ws['A3'].font = Font(size=9, color='64748B', italic=True)
+    ws['A3'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[3].height = 16
+
+    # Row 4: blank spacer
+    ws.row_dimensions[4].height = 8
+
+    # Row 5: column headers
+    headers = ['Ref', 'Patient', 'Doctor', 'Specialization', 'Date', 'Time', 'Status', 'Notes']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[5].height = 18
+
+    # Data rows starting at row 6
+    for row_num, appt in enumerate(appointments, 6):
+        ws.cell(row=row_num, column=1, value=appt.appointment_ref)
+        ws.cell(row=row_num, column=2, value=appt.patient.get_full_name() or appt.patient.username)
+        ws.cell(row=row_num, column=3, value=str(appt.doctor) if appt.doctor else '—')
+        ws.cell(row=row_num, column=4, value=str(appt.doctor.specialization) if appt.doctor and appt.doctor.specialization else '—')
+        ws.cell(row=row_num, column=5, value=str(appt.date))
+        ws.cell(row=row_num, column=6, value=appt.start_time.strftime('%H:%M'))
+        ws.cell(row=row_num, column=7, value=appt.status)
+        notes_cell = ws.cell(row=row_num, column=8, value=appt.notes or '')
+        notes_cell.alignment = Alignment(wrap_text=True, vertical='top')
+
+    # Auto-size columns (scan from header row down)
+        # Auto-size columns (scan from header row down)
+    from openpyxl.utils import get_column_letter
+
+    for i, col in enumerate(ws.columns, start=1):
+        max_len = max(
+            (len(str(cell.value or '')) for cell in col if cell.row >= 5),
+            default=10
+        )
+
+        col_letter = get_column_letter(i)
+
+        if col_letter == 'H':
+            ws.column_dimensions[col_letter].width = 40
+        else:
+            ws.column_dimensions[col_letter].width = min(max_len + 4, 30)
+
+    # Add signature section at the bottom
+    last_data_row = 5 + appointments.count()  # 5 header rows + data
+    signature_start = last_data_row + 3
+
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # Reviewed By section (left)
+    ws.cell(row=signature_start, column=1, value='Reviewed By:').font = Font(bold=True, size=11)
+    ws.cell(row=signature_start + 1, column=1, value='Name:')
+    ws.cell(row=signature_start + 1, column=2, value='_' * 30)
+    ws.cell(row=signature_start + 2, column=1, value='Signature:')
+    ws.cell(row=signature_start + 2, column=2, value='_' * 30)
+    ws.cell(row=signature_start + 3, column=1, value='Date:')
+    ws.cell(row=signature_start + 3, column=2, value='_' * 30)
+
+    # Approved By section (right)
+    ws.cell(row=signature_start, column=5, value='Approved By:').font = Font(bold=True, size=11)
+    ws.cell(row=signature_start + 1, column=5, value='Name:')
+    ws.cell(row=signature_start + 1, column=6, value='_' * 30)
+    ws.cell(row=signature_start + 2, column=5, value='Signature:')
+    ws.cell(row=signature_start + 2, column=6, value='_' * 30)
+    ws.cell(row=signature_start + 3, column=5, value='Date:')
+    ws.cell(row=signature_start + 3, column=6, value='_' * 30)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="addis_clinic_report_{period}_{now}.xlsx"'
+    wb.save(response)
+    return response

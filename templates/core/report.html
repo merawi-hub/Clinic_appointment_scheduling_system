@@ -10,19 +10,27 @@
 
         /* Screen controls - hidden when printing */
         .screen-controls {
-            background: #1e3a5f; padding: 1rem 2rem;
-            display: flex; align-items: center; gap: 1rem;
+            background: #1e3a5f; padding: 0.75rem 1rem;
+            display: flex; align-items: center; gap: 0.75rem;
             position: sticky; top: 0; z-index: 100;
+            flex-wrap: wrap;
         }
-        .screen-controls h2 { color: #fff; font-size: 1rem; flex: 1; }
-        .btn-print { background: #22c55e; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-        .btn-back  { display:inline-flex;align-items:center;gap:0.45rem;padding:8px 18px;border-radius:50px;border:none;color:#fff;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 60%,#0891b2 100%);background-size:200% 200%;background-position:left center;box-shadow:0 3px 10px rgba(37,99,235,0.35);font-size:0.85rem;font-weight:600;text-decoration:none;transition:background-position 0.4s ease,box-shadow 0.3s ease,transform 0.2s ease; }
-        .btn-back:hover { background-position:right center;box-shadow:0 6px 20px rgba(37,99,235,0.5);transform:translateY(-2px) scale(1.03);color:#fff; }
-        .period-select { display: flex; gap: 0.5rem; align-items: center; }
-        .period-select select { padding: 6px 10px; border-radius: 6px; border: 1px solid #93c5fd; background: #0f172a; color: #fff; font-size: 0.85rem; }
-
+        .screen-controls h2 { color: #fff; font-size: 0.9rem; flex: 1; min-width: 120px; }
+        .btn-print { background: #22c55e; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+        .btn-back  { display:inline-flex;align-items:center;gap:0.45rem;padding:7px 14px;border-radius:50px;border:none;color:#fff;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 60%,#0891b2 100%);background-size:200% 200%;background-position:left center;box-shadow:0 3px 10px rgba(37,99,235,0.35);font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap; }
+        .period-select { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .period-select select { padding: 5px 8px; border-radius: 6px; border: 1px solid #93c5fd; background: #0f172a; color: #fff; font-size: 0.82rem; }
         /* Report page */
-        .report-page { max-width: 900px; margin: 2rem auto; padding: 2rem; background: #fff; }
+        .report-page { max-width: 900px; margin: 1rem auto; padding: 1.5rem; background: #fff; }
+        @media (max-width: 768px) {
+            .screen-controls { padding: 0.6rem 0.75rem; gap: 0.5rem; }
+            .screen-controls h2 { font-size: 0.78rem; }
+            .report-page { margin: 0.5rem; padding: 1rem; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .sig-grid { grid-template-columns: 1fr !important; }
+            table { font-size: 0.75rem; }
+            th, td { padding: 5px 6px !important; }
+        }
 
         /* Header */
         .report-header { border-bottom: 3px solid #1e3a5f; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
@@ -76,37 +84,58 @@
             body { font-size: 12px; }
             @page { margin: 1.5cm; }
         }
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .screen-controls {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0.75rem 1rem;
+                position: relative;
+            }
+            .screen-controls h2 { font-size: 0.85rem; width: 100%; }
+            .period-select { flex-wrap: wrap; width: 100%; }
+            .period-select select { flex: 1; min-width: 120px; }
+            .btn-print, .btn-back { font-size: 0.78rem; padding: 6px 12px; }
+            .report-page { margin: 0.5rem; padding: 1rem; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            table { font-size: 0.75rem; }
+            th, td { padding: 5px 6px; }
+            .sig-grid { grid-template-columns: 1fr !important; gap: 1rem; }
+            .report-header .clinic-name { font-size: 1.3rem; }
+            .report-meta { grid-template-columns: 1fr !important; }
+        }
     </style>
 </head>
 <body>
 
 <!-- Screen controls (hidden on print) -->
 <div class="screen-controls">
-    <h2>📊 Addis Clinic Report — {{ period_label }}</h2>
+    <h2>📊 {{ period_label }} Report</h2>
     <div class="period-select">
-        <span style="color:#93c5fd;font-size:0.85rem;">Period:</span>
+        <span style="color:#93c5fd;font-size:0.82rem;">Period:</span>
         <select onchange="window.location='/admin-dashboard/report/?period='+this.value">
             {% for val, label in period_choices %}
             <option value="{{ val }}" {% if val == period %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <!-- Custom date range -->
-        <form id="customForm" action="{% url 'generate_report' %}" method="get" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <form id="customForm" action="{% url 'generate_report' %}" method="get" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.4rem;flex-wrap:wrap;">
             <input type="hidden" name="period" value="custom">
-            <span style="color:#93c5fd;font-size:0.85rem;font-weight:600;">Last</span>
+            <span style="color:#93c5fd;font-size:0.82rem;font-weight:600;">Last</span>
             <input type="number" name="custom_value" value="{{ custom_value|default:'1' }}" min="1" max="999"
-                   style="width:65px;padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.85rem;text-align:center;" required>
-            <select name="custom_unit" style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.85rem;">
+                   style="width:55px;padding:4px 6px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.82rem;text-align:center;" required>
+            <select name="custom_unit" style="padding:4px 6px;border-radius:6px;border:1px solid #93c5fd;background:#0f172a;color:#fff;font-size:0.82rem;">
                 <option value="days" {% if custom_unit == 'days' %}selected{% endif %}>Days</option>
                 <option value="weeks" {% if custom_unit == 'weeks' %}selected{% endif %}>Weeks</option>
                 <option value="months" {% if custom_unit == 'months' %}selected{% endif %}>Months</option>
             </select>
-            <button type="submit" style="padding:4px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">Generate</button>
+            <button type="submit" style="padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:0.82rem;cursor:pointer;font-weight:600;">Go</button>
         </form>
     </div>
-    <a href="{% url 'admin_dashboard' %}" class="btn-back"><i class="fas fa-th-large"></i> Dashboard</a>
-    <button class="btn-print" onclick="window.print()">🖨 Print / Save as PDF</button>
-    <small style="color:#94a3b8;font-size:0.75rem;">In print dialog → select "Save as PDF" to download</small>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <a href="{% url 'admin_dashboard' %}" class="btn-back"><i class="fas fa-th-large"></i> Dashboard</a>
+        <button class="btn-print" onclick="window.print()">🖨 PDF</button>
+        <a href="{% url 'export_report_excel' %}?period={{ period }}" style="background:#16a34a;color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap;">📊 Excel</a>
+    </div>
 </div>
 
 <!-- Report content -->
@@ -114,10 +143,10 @@
 
     <!-- Header -->
     <div class="report-header">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
             <div>
                 <div class="clinic-name">🏥 Addis Clinic</div>
-                <div class="report-title">Addis Clinicointment System — Official Report</div>
+                <div class="report-title">Appointment Management System — Official Report</div>
             </div>
             <div style="text-align:right;font-size:0.8rem;color:#64748b;">
                 <div><strong>Report ID:</strong> RPT-{{ generated_at|date:"Ymd" }}-{{ period|upper }}</div>
@@ -126,8 +155,8 @@
             </div>
         </div>
         <div class="report-meta" style="margin-top:1rem;">
-            <div class="meta-item"><span class="meta-label">Report Period:</span><span class="meta-value">{{ period_label }}</span></div>
-            <div class="meta-item"><span class="meta-label">Date Range:</span><span class="meta-value">{{ start_date }} — {{ end_date }}</span></div>
+            <div class="meta-item"><span class="meta-label">Report Period:</span><span class="meta-value"><strong>{{ period_label }}</strong></span></div>
+            <div class="meta-item"><span class="meta-label">Date Range:</span><span class="meta-value"><strong>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</strong></span></div>
             <div class="meta-item"><span class="meta-label">Generated By:</span><span class="meta-value">{{ generated_by }}</span></div>
             <div class="meta-item"><span class="meta-label">Total Records:</span><span class="meta-value">{{ total_appointments }} appointments</span></div>
         </div>

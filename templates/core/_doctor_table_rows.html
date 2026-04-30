@@ -1,0 +1,47 @@
+{% for doc in doctors_list %}
+<tr>
+    <td>
+        <div class="d-flex align-items-center gap-2">
+            {% if doc.photo %}
+            <img src="{{ doc.photo.url }}" alt="{{ doc }}"
+                 style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #e2e8f0;">
+            {% else %}
+            <div style="width:38px;height:38px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;flex-shrink:0;">
+                {{ doc.user.first_name|first|upper }}{{ doc.user.last_name|first|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <div style="font-weight:600;font-size:0.88rem;">{{ doc }}</div>
+                {% if doc.bio %}<div style="font-size:0.75rem;color:#64748b;">{{ doc.bio|truncatechars:40 }}</div>{% endif %}
+            </div>
+        </div>
+    </td>
+    <td>{{ doc.user.username }}</td>
+    <td>{{ doc.user.phone|default:"—" }}</td>
+    <td>
+        <span class="badge bg-{% if doc.is_available %}success{% else %}secondary{% endif %}">
+            {% if doc.is_available %}Available{% else %}Unavailable{% endif %}
+        </span>
+    </td>
+    <td>
+        {% if doc.schedule_count > 0 %}
+        <span class="badge bg-primary">{{ doc.schedule_count }} day(s)</span>
+        {% else %}
+        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i>No Schedule</span>
+        {% endif %}
+    </td>
+    <td class="d-flex gap-1 flex-wrap">
+        <a href="{% url 'admin_edit_doctor' doc.id %}" class="btn btn-sm btn-warning">Edit</a>
+        <form method="post" action="{% url 'admin_toggle_doctor_availability' doc.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm {% if doc.is_available %}btn-secondary{% else %}btn-success{% endif %}">
+                {% if doc.is_available %}Set Unavailable{% else %}Set Available{% endif %}
+            </button>
+        </form>
+        <a href="{% url 'admin_delete_doctor' doc.id %}" class="btn btn-sm btn-danger"
+           data-confirm="Permanently delete Dr. {{ doc }}?"
+           data-confirm-title="Delete Doctor"
+           data-confirm-type="danger">Delete</a>
+    </td>
+</tr>
+{% endfor %}

@@ -243,13 +243,17 @@ footer hr{border-color:rgba(255,255,255,.1);margin:2rem 0 1rem}
                 <div class="col-md-6 col-lg-3">
                     <div class="doc-card" style="transition:all 0.3s;cursor:default;">
                         <div style="padding:1.2rem;text-align:center;">
-                            <div style="width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;margin:0 auto 0.75rem;">
+                            {% if doc.photo %}
+                            <img src="{{ doc.photo.url }}" alt="{{ doc }}"
+                                 style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 0.75rem;display:block;border:3px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                            {% else %}
+                            <div style="width:72px;height:72px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;color:#fff;margin:0 auto 0.75rem;box-shadow:0 4px 12px rgba(37,99,235,0.3);">
                                 {{ doc.user.first_name|first|upper }}{{ doc.user.last_name|first|upper }}
                             </div>
+                            {% endif %}
                             <h6 style="font-weight:700;margin-bottom:0.2rem;color:#1e293b;font-size:0.9rem;">{{ doc }}</h6>
                             <p style="color:#2563eb;font-size:0.75rem;font-weight:600;margin-bottom:0.6rem;">{{ spec.name }}</p>
                             {% if doc.bio %}<p style="color:#64748b;font-size:0.75rem;line-height:1.4;margin-bottom:0.75rem;">{{ doc.bio|truncatechars:55 }}</p>{% endif %}
-                            <!-- Book button -->
                             <a href="{% url 'register' %}" class="btn btn-primary btn-sm w-100" style="border-radius:8px;font-size:0.78rem;">
                                 <i class="fas fa-calendar-plus me-1"></i>Book Appointment
                             </a>

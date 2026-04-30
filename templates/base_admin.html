@@ -28,7 +28,7 @@
             --sidebar-width: 240px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
         /* TOPBAR */
         .top-nav {
@@ -59,12 +59,12 @@
             transition: var(--transition);
         }
         .top-nav .brand:hover { opacity: 0.9; color: #fff; }
-        .brand-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.2); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .brand-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.2); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink:0; }
         .nav-right { display: flex; align-items: center; gap: 0.75rem; }
-        .nav-user { color: #cbd5e1; font-size: 0.82rem; font-weight: 500; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.1); border-radius: 20px; }
+        .nav-user { color: #cbd5e1; font-size: 0.82rem; font-weight: 500; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.1); border-radius: 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
         .nav-btn { color: #fff; text-decoration: none; font-size: 0.82rem; font-weight: 500; padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); transition: var(--transition); display: flex; align-items: center; gap: 0.4rem; }
         .nav-btn:hover { background: rgba(255,255,255,0.25); color: #fff; transform: translateY(-1px); }
-        .notif-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: rgba(255,255,255,0.1); border-radius: 50%; color: #fff; text-decoration: none; font-size: 1rem; transition: var(--transition); }
+        .notif-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; background: rgba(255,255,255,0.1); border-radius: 50%; color: #fff; text-decoration: none; font-size: 1rem; transition: var(--transition); flex-shrink:0; }
         .notif-wrap:hover { background: rgba(255,255,255,0.25); color: #fff; transform: scale(1.1); }
         .notif-badge { position: absolute; top: -2px; right: -2px; background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 2px solid #1e3a5f; animation: pulse 2s infinite; }
         @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
@@ -79,6 +79,7 @@
             padding: 1rem 0 80px;
             box-shadow: 2px 0 20px rgba(0,0,0,0.15);
             z-index: 999;
+            transition: transform 0.3s ease;
         }
         .sidebar::-webkit-scrollbar { width: 4px; }
         .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
@@ -187,6 +188,21 @@
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
         .page-header h4 { margin: 0; font-size: 1.4rem; }
 
+        /* Responsive page headers — prevent overflow on all pages */
+        .main-content > div[class*="d-flex"][class*="justify-content-between"] {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-start;
+        }
+        .main-content > div[class*="d-flex"][class*="justify-content-between"] h4,
+        .main-content > div[class*="d-flex"][class*="justify-content-between"] h5 {
+            margin-bottom: 0;
+        }
+        .main-content > div[class*="d-flex"][class*="justify-content-between"] > a,
+        .main-content > div[class*="d-flex"][class*="justify-content-between"] > div.d-flex {
+            flex-shrink: 0;
+        }
+
         /* ===== BACK BUTTON ===== */
         .btn-nav-back {
             display: inline-flex;
@@ -280,11 +296,80 @@
         .btn-card-action:active { transform: translateY(0); }
 
         @media (max-width: 768px) {
-            .sidebar { display: none; }
-            .main-content { margin-left: 0; padding: 1rem; }
-            .top-nav { padding: 0 1rem; }
-            .top-nav .brand { position: static; width: auto; background: none; border: none; }
+            :root { --sidebar-width: 260px; }
+
+            /* Topbar: full width, hamburger on LEFT, brand centered */
+            .top-nav {
+                padding: 0 1rem;
+                justify-content: flex-start;
+                gap: 0.75rem;
+            }
+            .top-nav .brand {
+                position: static;
+                width: auto;
+                background: none;
+                border: none;
+                flex: 1;
+            }
+            .nav-user { display: none; }
+            .nav-btn { display: none; }
+            .hamburger { display: flex !important; order: -1; }
+
+            /* Sidebar: hidden off-screen by default, slides in */
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1100;
+                top: 64px;
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            /* Overlay */
+            .sidebar-overlay {
+                display: none;
+                position: fixed; inset: 0; top: 64px;
+                background: rgba(0,0,0,0.6);
+                z-index: 1099;
+            }
+            .sidebar-overlay.open { display: block; }
+
+            /* Main content: no left margin */
+            .main-content {
+                margin-left: 0 !important;
+                padding: 0.75rem;
+                width: 100%;
+                overflow-x: hidden;
+            }
+
+            /* Prevent any horizontal overflow */
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .row { margin-left: 0; margin-right: 0; }
+            .card { overflow: hidden; }
+            .d-flex.flex-wrap { flex-wrap: wrap !important; }
+            .btn { white-space: nowrap; }
+
+            /* Stack action buttons */
+            .d-flex.gap-2 { flex-wrap: wrap; }
         }
+
+        @media (min-width: 769px) {
+            .hamburger { display: none !important; }
+            .sidebar-overlay { display: none !important; }
+        }
+
+        /* Hamburger button */
+        .hamburger {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.15);
+            border: none; border-radius: 8px;
+            cursor: pointer; color: #fff;
+            font-size: 1.2rem;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .hamburger:hover { background: rgba(255,255,255,0.28); }
 
         /* Hide browser built-in password reveal icon */
         input[type="password"]::-ms-reveal,
@@ -299,14 +384,20 @@
         Addis Clinic
     </a>
     <div class="nav-right">
+        <button class="hamburger" id="sidebarToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+        </button>
         <span class="nav-user"><i class="fas fa-user-shield me-1"></i>{{ user.get_full_name|default:user.username }} <span style="opacity:0.6;font-size:0.75rem;">({{ user.role|capfirst }})</span></span>
     </div>
     {% endif %}
 </nav>
 
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <div style="display:flex; min-height:calc(100vh - 64px);">
     {% if user.is_authenticated %}
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-section">Main</div>
         <a href="{% url 'admin_dashboard' %}"><i class="fas fa-chart-pie"></i> Dashboard</a>
         <div class="sidebar-section">Management</div>
@@ -327,12 +418,12 @@
             {% if unread_notifications %}<span class="badge bg-danger ms-auto">{{ unread_notifications }}</span>{% endif %}
         </a>
         <!-- Bottom user section -->
-        <div style="position:absolute;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,0.08);padding:0.75rem 0;">
-            <a href="{% url 'profile' %}" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 1.2rem;color:#94a3b8;text-decoration:none;font-size:0.875rem;font-weight:500;transition:all 0.2s;">
-                <i class="fas fa-user-circle" style="width:18px;text-align:center;"></i> Profile
+        <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:1rem;padding-top:0.5rem;">
+            <a href="{% url 'profile' %}">
+                <i class="fas fa-user-circle"></i> Profile
             </a>
-            <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 1.2rem;color:#94a3b8;text-decoration:none;font-size:0.875rem;font-weight:500;transition:all 0.2s;">
-                <i class="fas fa-sign-out-alt" style="width:18px;text-align:center;"></i> Logout
+            <a href="{% url 'logout' %}">
+                <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
     </aside>
@@ -426,6 +517,21 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script>
+// Sidebar toggle for mobile
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('sidebarToggle');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        });
+    }
+});
+
 // Auto password toggle — wraps every type="password" input with an eye icon
 document.addEventListener('DOMContentLoaded', function () {
     // Auto-dismiss all alerts after 10 seconds

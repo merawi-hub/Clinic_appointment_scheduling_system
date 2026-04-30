@@ -1,11 +1,75 @@
 {% extends 'base_admin.html' %}
 {% block title %}Today's Appointments{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-calendar-day me-2"></i>Today's Appointments — {{ today|date:"l, F d Y" }}</h4>
-    <div class="d-flex gap-2">
-        <a href="{% url 'admin_medical_records' %}" class="btn-card-action"><i class="fas fa-notes-medical me-1"></i>Medical Records</a>
-        <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i> Dashboard</a>
+<style>
+@keyframes emergencyPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+}
+/* Mobile card layout for all tables on this page */
+@media (max-width: 767px) {
+    .today-table thead { display: none; }
+    .today-table tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        padding: 12px 14px;
+    }
+    .today-table tbody td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 4px 0 !important;
+        border: none !important;
+        font-size: 0.85rem;
+        gap: 8px;
+    }
+    .today-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #64748b;
+        font-size: 0.75rem;
+        min-width: 72px;
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+    .today-table .action-td {
+        display: block !important;
+        padding-top: 10px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        margin-top: 6px;
+    }
+    .today-table .action-td::before { content: none; }
+    .today-table .action-td .action-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+    .today-table .action-td .action-row > * { flex: 1; }
+    .today-table .action-td .action-row .btn,
+    .today-table .action-td .action-row form .btn {
+        width: 100%;
+        justify-content: center;
+        font-size: 0.78rem;
+        padding: 7px 4px;
+    }
+    /* Hide less important columns on mobile */
+    .today-table td[data-label="Email"],
+    .today-table td[data-label="Phone"] { display: none; }
+}
+.d-contents { display: contents; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 gap-2 flex-wrap">
+    <div>
+        <h4 class="mb-0" style="font-size:clamp(1rem,4vw,1.4rem);"><i class="fas fa-calendar-day me-2"></i>Today's Appointments</h4>
+        <div style="font-size:0.82rem;color:#64748b;margin-top:3px;">{{ today|date:"l, F d Y" }}</div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <a href="{% url 'admin_medical_records' %}" class="btn-card-action"><i class="fas fa-notes-medical me-1"></i><span class="d-none d-sm-inline">Medical Records</span><span class="d-sm-none">Records</span></a>
+        <a href="{% url 'admin_dashboard' %}" class="btn-nav-back"><i class="fas fa-th-large"></i><span class="d-none d-sm-inline"> Dashboard</span></a>
     </div>
 </div>
 
@@ -106,13 +170,6 @@
     </div>
 </div>
 
-<style>
-@keyframes emergencyPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
-    50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
-}
-</style>
-
 <!-- OVERDUE: time passed, not completed -->
 {% if overdue %}
 <div class="card mb-4" style="border:2px solid #dc2626;">
@@ -122,33 +179,34 @@
         <span class="ms-2" style="font-size:0.8rem;opacity:0.85;">These appointments need to be marked as completed</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-bordered mb-0">
+        <table class="table table-bordered mb-0 today-table">
             <thead><tr><th>Ref</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Time</th><th>Status</th><th>Notes</th><th>Action</th></tr></thead>
             <tbody>
                 {% for appt in appointments %}
                 {% if appt.id in overdue %}
                 <tr style="background:#fff5f5;">
-                    <td><code style="font-size:0.8rem;color:#dc2626;">{{ appt.appointment_ref }}</code></td>
-                    <td><strong>{{ appt.patient.get_full_name|default:appt.patient.username }}</strong><br>
-                        <small class="text-muted">{{ appt.patient_phone|default:appt.patient.phone|default:"" }}</small></td>
-                    <td>{{ appt.patient_phone|default:appt.patient.phone|default:"—" }}</td>
-                    <td>{{ appt.doctor|default:"—" }}</td>
-                    <td>
+                    <td data-label="Ref"><code style="font-size:0.8rem;color:#dc2626;">{{ appt.appointment_ref }}</code></td>
+                    <td data-label="Patient"><strong>{{ appt.patient.get_full_name|default:appt.patient.username }}</strong></td>
+                    <td data-label="Phone">{{ appt.patient_phone|default:appt.patient.phone|default:"—" }}</td>
+                    <td data-label="Doctor">{{ appt.doctor|default:"—" }}</td>
+                    <td data-label="Time">
                         <span style="color:#dc2626;font-weight:700;">{{ appt.start_time|time:"g:i A" }}</span>
                         <i class="fas fa-exclamation-circle text-danger ms-1" title="Overdue"></i>
                     </td>
-                    <td><span class="badge bg-danger">{{ appt.status|capfirst }} — Overdue</span></td>
-                    <td style="max-width:120px;font-size:0.8rem;">{{ appt.notes|default:"—" }}</td>
-                    <td>
-                        <form method="post" action="{% url 'admin_complete_appointment' appt.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger btn-sm"
-                                data-confirm="Mark overdue appointment {{ appt.appointment_ref }} as completed?"
-                                data-confirm-title="Mark as Completed"
-                                data-confirm-type="warning">
-                                <i class="fas fa-check me-1"></i>Complete
-                            </button>
-                        </form>
+                    <td data-label="Status"><span class="badge bg-danger">{{ appt.status|capfirst }} — Overdue</span></td>
+                    <td data-label="Notes" style="max-width:120px;font-size:0.8rem;">{{ appt.notes|default:"—" }}</td>
+                    <td class="action-td">
+                        <div class="action-row">
+                            <form method="post" action="{% url 'admin_complete_appointment' appt.id %}" class="d-contents">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                    data-confirm="Mark overdue appointment {{ appt.appointment_ref }} as completed?"
+                                    data-confirm-title="Mark as Completed"
+                                    data-confirm-type="warning">
+                                    <i class="fas fa-check me-1"></i>Complete
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endif %}
@@ -163,31 +221,32 @@
 <div class="card mb-4">
     <div class="card-header"><i class="fas fa-clock me-2"></i>Active Today</div>
     <div class="table-responsive">
-        <table class="table table-bordered table-hover mb-0">
+        <table class="table table-bordered table-hover mb-0 today-table">
             <thead><tr><th>Ref</th><th>Patient</th><th>Phone</th><th>Email</th><th>Doctor</th><th>Specialty</th><th>Time</th><th>Status</th><th>Notes</th><th>Action</th></tr></thead>
             <tbody>
                 {% with active_found=False %}
                 {% for appt in appointments %}
                 {% if appt.id not in overdue and appt.status != 'completed' and appt.status != 'cancelled' and appt.status != 'rejected' %}
                 <tr>
-                    <td><code style="font-size:0.8rem;color:#2563eb;">{{ appt.appointment_ref }}</code></td>
-                    <td><strong>{{ appt.patient.get_full_name|default:appt.patient.username }}</strong></td>
-                    <td>{{ appt.patient_phone|default:appt.patient.phone|default:"—" }}</td>
-                    <td style="font-size:0.8rem;">{{ appt.patient_email|default:appt.patient.email|default:"—" }}</td>
-                    <td>{{ appt.doctor|default:"—" }}</td>
-                    <td>{{ appt.doctor.specialization|default:"—" }}</td>
-                    <td>{{ appt.start_time|time:"g:i A" }}</td>
-                    <td>
+                    <td data-label="Ref"><code style="font-size:0.8rem;color:#2563eb;">{{ appt.appointment_ref }}</code></td>
+                    <td data-label="Patient"><strong>{{ appt.patient.get_full_name|default:appt.patient.username }}</strong></td>
+                    <td data-label="Phone">{{ appt.patient_phone|default:appt.patient.phone|default:"—" }}</td>
+                    <td data-label="Email" style="font-size:0.8rem;">{{ appt.patient_email|default:appt.patient.email|default:"—" }}</td>
+                    <td data-label="Doctor">{{ appt.doctor|default:"—" }}</td>
+                    <td data-label="Specialty">{{ appt.doctor.specialization|default:"—" }}</td>
+                    <td data-label="Time">{{ appt.start_time|time:"g:i A" }}</td>
+                    <td data-label="Status">
                         <span class="badge bg-{% if appt.status == 'confirmed' %}success{% elif appt.status == 'pending' %}warning text-dark{% elif appt.status == 'rescheduled' %}info{% elif appt.status == 'delayed' %}danger{% else %}secondary{% endif %}">
                             {{ appt.status|capfirst }}
                         </span>
                         {% if appt.follow_up_of %}<span class="badge bg-info ms-1">Follow-up</span>{% endif %}
                     </td>
-                    <td style="max-width:120px;font-size:0.8rem;">{{ appt.notes|default:"—" }}</td>
-                    <td>
+                    <td data-label="Notes" style="max-width:120px;font-size:0.8rem;">{{ appt.notes|default:"—" }}</td>
+                    <td class="action-td">
                         {% if appt.status == 'confirmed' %}
+                        <div class="action-row">
                             {% if appt.end_time <= now.time %}
-                            <form method="post" action="{% url 'admin_complete_appointment' appt.id %}">
+                            <form method="post" action="{% url 'admin_complete_appointment' appt.id %}" class="d-contents">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-success btn-sm"
                                     data-confirm="Mark appointment {{ appt.appointment_ref }} as completed?"
@@ -197,14 +256,15 @@
                                 </button>
                             </form>
                             {% else %}
-                            <span class="text-muted" style="font-size:0.78rem;">
+                            <span class="text-muted" style="font-size:0.78rem;flex:1;">
                                 <i class="fas fa-clock me-1"></i>Ends {{ appt.end_time|time:"g:i A" }}
                             </span>
                             {% endif %}
-                            <button class="btn btn-warning btn-sm mt-1"
+                            <button class="btn btn-warning btn-sm"
                                     onclick="toggleRescheduleRow('rs-{{ appt.id }}', this)">
                                 <i class="fas fa-calendar-edit me-1"></i>Reschedule
                             </button>
+                        </div>
                         {% elif appt.status == 'pending' %}
                         <span class="text-muted" style="font-size:0.8rem;"><i class="fas fa-hourglass-half me-1"></i>Awaiting doctor</span>
                         {% else %}—{% endif %}

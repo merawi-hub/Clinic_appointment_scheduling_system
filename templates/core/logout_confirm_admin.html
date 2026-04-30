@@ -1,0 +1,20 @@
+{% extends 'base_auth.html' %}
+{% block title %}Sign Out — Addis Clinic{% endblock %}
+{% block content %}
+<div style="text-align:center;margin-bottom:1.5rem;">
+    <div style="width:72px;height:72px;background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem;box-shadow:0 8px 24px rgba(220,38,38,0.4);animation:iconPulse 3s ease-in-out infinite;">
+        <i class="fas fa-sign-out-alt" style="font-size:1.8rem;color:#fff;"></i>
+    </div>
+    <h4 class="form-title">Sign Out?</h4>
+    <p class="form-sub">Are you sure you want to end your session?<br>You'll need to sign in again to continue.</p>
+</div>
+<form method="post" class="d-flex flex-column gap-3">
+    {% csrf_token %}
+    <button type="submit" class="btn-auth" style="background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 16px rgba(220,38,38,0.4);">
+        <i class="fas fa-sign-out-alt me-2"></i>Yes, Sign Out
+    </button>
+    <a href="{% url 'admin_dashboard' %}" class="btn-auth" style="background:rgba(255,255,255,0.1);box-shadow:none;text-decoration:none;text-align:center;">
+        <i class="fas fa-arrow-left me-2"></i>Cancel, Go Back
+    </a>
+</form>
+{% endblock %}

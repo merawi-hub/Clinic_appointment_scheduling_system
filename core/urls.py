@@ -16,6 +16,7 @@ urlpatterns = [
     path('reschedule/<int:appointment_id>/', views.patient_reschedule_request, name='patient_reschedule'),
     path('notifications/', views.notifications_view, name='notifications'),
     path('notifications/<int:notif_id>/clear/', views.clear_notification, name='clear_notification'),
+    path('notifications/<int:notif_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),
     path('profile/', views.profile_view, name='profile'),
     path('change-password/', views.change_password_view, name='change_password'),
@@ -23,6 +24,8 @@ urlpatterns = [
     # Admin specializations
     path('admin-dashboard/chart-data/', views.chart_data_api, name='chart_data_api'),
     path('admin-dashboard/report/', views.generate_report, name='generate_report'),
+    path('admin-dashboard/report/csv/', views.export_report_csv, name='export_report_csv'),
+    path('admin-dashboard/report/excel/', views.export_report_excel, name='export_report_excel'),
     path('admin-dashboard/specializations/', views.admin_specializations, name='admin_specializations'),
 
     # Doctor
