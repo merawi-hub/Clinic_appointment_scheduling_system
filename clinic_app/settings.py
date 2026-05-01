@@ -25,8 +25,7 @@ SECRET_KEY = 'django-insecure-wmmafj&*zg_$_6ai1-lahnq28(x#bekjk!7^+(!#==j$-rjrhn
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.pythonanywhere.com']
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -139,6 +138,7 @@ LOCALE_PATHS = [
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
